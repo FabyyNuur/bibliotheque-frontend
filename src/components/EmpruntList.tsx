@@ -13,7 +13,9 @@ const EmpruntList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [filter, setFilter] = useState<"all" | "current" | "overdue">("all");
+  const [filter, setFilter] = useState<
+    "all" | "current" | "overdue" | "history"
+  >("all");
   const [newEmprunt, setNewEmprunt] = useState<CreateEmpruntRequest>({
     utilisateurId: "",
     livreId: "",
@@ -52,6 +54,9 @@ const EmpruntList: React.FC = () => {
         case "overdue":
           data = await empruntService.getEmpruntsEnRetard();
           break;
+        case "history":
+          data = await empruntService.getEmpruntsHistorique();
+          break;
         default:
           data = await empruntService.getAllEmpruntsEnCours();
       }
@@ -78,8 +83,11 @@ const EmpruntList: React.FC = () => {
       });
       setShowCreateForm(false);
       loadData();
-    } catch (err) {
-      setError("Erreur lors de la création de l'emprunt");
+    } catch (err: any) {
+      setError(
+        "Cet utilisateur a déjà un emprunt en cours. Il doit le rendre avant d'en faire un autre."
+      );
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -139,42 +147,73 @@ const EmpruntList: React.FC = () => {
     <div className="emprunt-list">
       <div className="header">
         <h2>Gestion des Emprunts</h2>
+        <div style={{ display: "flex", gap: "10px" }}>
+  <button
+              className={`btn ${filter === "history" ? "active" : "secondary"}`}
+              onClick={() => setFilter("history")}
+               style={{ borderRadius: "8px" }}
+            >
+              Historiques
+            </button>
         <button
           className="btn primary"
           onClick={() => setShowCreateForm(!showCreateForm)}
         >
           {showCreateForm ? "Annuler" : "➕ Nouvel emprunt"}
         </button>
+        </div>
+        
       </div>
 
       {error && <div className="error">{error}</div>}
 
       <div className="filters">
-        <div className="filter-buttons">
-          <button
-            className={`btn ${filter === "all" ? "active" : "secondary"}`}
-            onClick={() => setFilter("all")}
+        <div
+          className="filter-buttons"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              background: "#f5f5f5",
+              borderRadius: "8px",
+              gap: "10px",
+            }}
           >
-            Tous
-          </button>
-          <button
-            className={`btn ${filter === "current" ? "active" : "secondary"}`}
-            onClick={() => setFilter("current")}
-          >
-            En cours
-          </button>
-          <button
-            className={`btn ${filter === "overdue" ? "active" : "secondary"}`}
-            onClick={() => setFilter("overdue")}
-          >
-            En retard
-          </button>
+            <button
+              className={`btn ${filter === "all" ? "active" : "secondary"}`}
+              onClick={() => setFilter("all")}
+              style={{ borderRadius: "8px" }}
+            >
+              Tous
+            </button>
+            <button
+              className={`btn ${filter === "current" ? "active" : "secondary"}`}
+              onClick={() => setFilter("current")}
+               style={{ borderRadius: "8px" }}
+            >
+              En cours
+            </button>
+            <button
+              className={`btn ${filter === "overdue" ? "active" : "secondary"}`}
+              onClick={() => setFilter("overdue")}
+              style={{ borderRadius: "8px" }}
+            >
+              En retard
+            </button>
+          </div>
+
         </div>
       </div>
 
       {showCreateForm && (
         <form className="create-form" onSubmit={handleCreateEmprunt}>
           <h3>Créer un nouvel emprunt</h3>
+
           <div className="form-group">
             <select
               value={newEmprunt.utilisateurId}
@@ -236,12 +275,19 @@ const EmpruntList: React.FC = () => {
               <th>Livre</th>
               <th>Date d'emprunt</th>
               <th>Retour prévu</th>
-              <th>Jours restants</th>
+                   <th>{filter === "history" ? "Durée" : "Jours restants"}</th>
               <th>Statut</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
+            {/* {(filter === "history"
+              ? emprunts.filter((emprunt) => emprunt.statut === "RETOURNE")
+              : emprunts
+            ).map((emprunt) => {
+              const daysRemaining = getDaysRemaining(
+                emprunt.dateRetourPrevu.toString()
+              ); */}
             {emprunts.map((emprunt) => {
               const daysRemaining = getDaysRemaining(
                 emprunt.dateRetourPrevu.toString()

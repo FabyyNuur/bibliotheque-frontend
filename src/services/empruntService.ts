@@ -1,3 +1,4 @@
+
 import { apiClient } from './apiClient';
 import { Emprunt, CreateEmpruntRequest, EmpruntAvecDetails } from '../types/Emprunt';
 
@@ -8,6 +9,7 @@ export const empruntService = {
     return response.data;
   },
 
+  
 
   async returnBook(empruntId: string): Promise<Emprunt> {
     const response = await apiClient.patch(`/emprunts/${empruntId}/retour`);
@@ -35,6 +37,11 @@ export const empruntService = {
 
   async getEmpruntById(id: string): Promise<Emprunt> {
     const response = await apiClient.get(`/emprunts/${id}`);
+    return response.data;
+  },
+
+  async getEmpruntsHistorique(): Promise<EmpruntAvecDetails[]> {
+    const response = await apiClient.get('/emprunts/historique');
     return response.data;
   }
 };
