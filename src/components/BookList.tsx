@@ -8,6 +8,8 @@ const BookList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterAvailable, setFilterAvailable] = useState(false);
   const [newBook, setNewBook] = useState<CreateBookRequest>({
@@ -75,6 +77,58 @@ const BookList: React.FC = () => {
     }
   };
 
+  const handleEditBook = (book: Book) => {
+    setEditingBook(book);
+    setNewBook({
+      titre: book.titre,
+      auteur: book.auteur,
+      isbn: book.isbn,
+      anneePublication: book.anneePublication,
+      genre: book.genre,
+    });
+    setShowEditForm(true);
+    setShowCreateForm(false);
+  };
+
+  const handleUpdateBook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBook) return;
+
+    try {
+      await bookService.updateBook(editingBook.id, {
+        titre: newBook.titre,
+        auteur: newBook.auteur,
+        isbn: newBook.isbn,
+        anneePublication: newBook.anneePublication,
+        genre: newBook.genre,
+      });
+      setNewBook({
+        titre: "",
+        auteur: "",
+        isbn: "",
+        anneePublication: new Date().getFullYear(),
+        genre: "",
+      });
+      setShowEditForm(false);
+      setEditingBook(null);
+      loadBooks();
+    } catch (err) {
+      setError("Erreur lors de la modification du livre");
+    }
+  };
+
+  const cancelEdit = () => {
+    setShowEditForm(false);
+    setEditingBook(null);
+    setNewBook({
+      titre: "",
+      auteur: "",
+      isbn: "",
+      anneePublication: new Date().getFullYear(),
+      genre: "",
+    });
+  };
+
   const handleDeleteBook = async (id: string) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce livre ?")) {
       try {
@@ -92,12 +146,29 @@ const BookList: React.FC = () => {
     <div className="book-list">
       <div className="header">
         <h2>Gestion des Livres</h2>
-        <button
-          className="btn primary"
-          onClick={() => setShowCreateForm(!showCreateForm)}
-        >
-          {showCreateForm ? "Annuler" : "➕ Nouveau livre"}
-        </button>
+        <div className="header-buttons">
+          {showEditForm && (
+            <button className="btn secondary" onClick={cancelEdit}>
+              Annuler modification
+            </button>
+          )}
+          <button
+            className="btn primary"
+            onClick={() => {
+              if (showEditForm) {
+                cancelEdit();
+              } else {
+                setShowCreateForm(!showCreateForm);
+              }
+            }}
+          >
+            {showCreateForm
+              ? "Annuler"
+              : showEditForm
+              ? "Nouveau livre"
+              : "➕ Nouveau livre"}
+          </button>
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -120,9 +191,14 @@ const BookList: React.FC = () => {
         </label>
       </div>
 
-      {showCreateForm && (
-        <form className="create-form" onSubmit={handleCreateBook}>
-          <h3>Ajouter un nouveau livre</h3>
+      {(showCreateForm || showEditForm) && (
+        <form
+          className="create-form"
+          onSubmit={showEditForm ? handleUpdateBook : handleCreateBook}
+        >
+          <h3>
+            {showEditForm ? "Modifier le livre" : "Ajouter un nouveau livre"}
+          </h3>
           <div className="form-group">
             <input
               type="text"
@@ -171,9 +247,20 @@ const BookList: React.FC = () => {
               required
             />
           </div>
-          <button type="submit" className="btn primary">
-            Ajouter
-          </button>
+          <div className="form-actions">
+            <button type="submit" className="btn primary">
+              {showEditForm ? "Modifier" : "Ajouter"}
+            </button>
+            {showEditForm && (
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={cancelEdit}
+              >
+                Annuler
+              </button>
+            )}
+          </div>
         </form>
       )}
 
@@ -213,10 +300,16 @@ const BookList: React.FC = () => {
             </div>
             <div className="book-actions">
               <button
+                className="btn small secondary"
+                onClick={() => handleEditBook(book)}
+              >
+                Modifier
+              </button>
+              <button
                 className="btn small danger"
                 onClick={() => handleDeleteBook(book.id)}
               >
-                🗑️ Supprimer
+                Supprimer
               </button>
             </div>
           </div>

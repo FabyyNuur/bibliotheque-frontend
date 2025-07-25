@@ -7,6 +7,8 @@ const UserList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState<CreateUserRequest>({
     nom: "",
     prenom: "",
@@ -41,6 +43,42 @@ const UserList: React.FC = () => {
     }
   };
 
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setNewUser({
+      nom: user.nom,
+      prenom: user.prenom,
+      email: user.email,
+    });
+    setShowEditForm(true);
+    setShowCreateForm(false);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    try {
+      await userService.updateUser(editingUser.id, {
+        nom: newUser.nom,
+        prenom: newUser.prenom,
+        email: newUser.email,
+      });
+      setNewUser({ nom: "", prenom: "", email: "" });
+      setShowEditForm(false);
+      setEditingUser(null);
+      loadUsers();
+    } catch (err) {
+      setError("Erreur lors de la modification de l'utilisateur");
+    }
+  };
+
+  const cancelEdit = () => {
+    setShowEditForm(false);
+    setEditingUser(null);
+    setNewUser({ nom: "", prenom: "", email: "" });
+  };
+
   const handleDeleteUser = async (id: string) => {
     if (
       window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")
@@ -69,19 +107,43 @@ const UserList: React.FC = () => {
     <div className="user-list">
       <div className="header">
         <h2>Gestion des Utilisateurs</h2>
-        <button
-          className="btn primary"
-          onClick={() => setShowCreateForm(!showCreateForm)}
-        >
-          {showCreateForm ? "Annuler" : "➕ Nouvel utilisateur"}
-        </button>
+        <div className="header-buttons">
+          {showEditForm && (
+            <button className="btn secondary" onClick={cancelEdit}>
+              Annuler modification
+            </button>
+          )}
+          <button
+            className="btn primary"
+            onClick={() => {
+              if (showEditForm) {
+                cancelEdit();
+              } else {
+                setShowCreateForm(!showCreateForm);
+              }
+            }}
+          >
+            {showCreateForm
+              ? "Annuler"
+              : showEditForm
+              ? "Nouvel utilisateur"
+              : "➕ Nouvel utilisateur"}
+          </button>
+        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
 
-      {showCreateForm && (
-        <form className="create-form" onSubmit={handleCreateUser}>
-          <h3>Créer un nouvel utilisateur</h3>
+      {(showCreateForm || showEditForm) && (
+        <form
+          className="create-form"
+          onSubmit={showEditForm ? handleUpdateUser : handleCreateUser}
+        >
+          <h3>
+            {showEditForm
+              ? "Modifier l'utilisateur"
+              : "Créer un nouvel utilisateur"}
+          </h3>
           <div className="form-group">
             <input
               type="text"
@@ -109,15 +171,26 @@ const UserList: React.FC = () => {
               required
             />
           </div>
-          <button type="submit" className="btn primary">
-            Créer
-          </button>
+          <div className="form-actions">
+            <button type="submit" className="btn primary">
+              {showEditForm ? "Modifier" : "Créer"}
+            </button>
+            {showEditForm && (
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={cancelEdit}
+              >
+                Annuler
+              </button>
+            )}
+          </div>
         </form>
       )}
 
       <div className="table-container">
         <table className="users-table">
-          <thead>
+          <thead className="table-header-white">
             <tr>
               <th>Nom</th>
               <th>Prénom</th>
@@ -143,7 +216,13 @@ const UserList: React.FC = () => {
                 </td>
                 <td className="actions">
                   <button
-                    className="btn small secondary"
+                    className="btn small primary"
+                    onClick={() => handleEditUser(user)}
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    className="btn small black"
                     onClick={() => toggleUserStatus(user)}
                   >
                     {user.actif ? "Désactiver" : "Activer"}
@@ -152,7 +231,7 @@ const UserList: React.FC = () => {
                     className="btn small danger"
                     onClick={() => handleDeleteUser(user.id)}
                   >
-                    🗑️
+                    Supprimer
                   </button>
                 </td>
               </tr>
