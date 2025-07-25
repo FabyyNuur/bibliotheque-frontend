@@ -14,7 +14,8 @@
       "default",
       {
         "ignore": [
-          "position: sticky"
+          "position: sticky",
+          "-webkit-text-size-adjust"
         ]
       }
     ]
