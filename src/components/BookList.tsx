@@ -150,12 +150,13 @@ const BookList: React.FC = () => {
         <h2>Gestion des Livres</h2>
         <div className="header-buttons">
           {showEditForm && (
-            <button className="btn secondary" onClick={cancelEdit}>
+            <button className="btn secondary btn-icon" onClick={cancelEdit}>
+              <i className="fas fa-times"></i>
               Annuler modification
             </button>
           )}
           <button
-            className="btn primary"
+            className="btn primary btn-icon"
             onClick={() => {
               if (showEditForm) {
                 cancelEdit();
@@ -164,11 +165,12 @@ const BookList: React.FC = () => {
               }
             }}
           >
+            <i className="fas fa-plus"></i>
             {showCreateForm
               ? "Annuler"
               : showEditForm
               ? "Nouveau livre"
-              : "➕ Nouveau livre"}
+              : "Nouveau livre"}
           </button>
         </div>
       </div>
@@ -258,15 +260,17 @@ const BookList: React.FC = () => {
             />
           </div>
           <div className="form-actions">
-            <button type="submit" className="btn primary">
+            <button type="submit" className="btn primary btn-icon">
+              <i className="fas fa-save"></i>
               {showEditForm ? "Modifier" : "Ajouter"}
             </button>
             {showEditForm && (
               <button
                 type="button"
-                className="btn secondary"
+                className="btn secondary btn-icon"
                 onClick={cancelEdit}
               >
+                <i className="fas fa-times"></i>
                 Annuler
               </button>
             )}
@@ -283,11 +287,16 @@ const BookList: React.FC = () => {
             <div className="book-header">
               <h3>{book.titre}</h3>
               <span
-                className={`availability ${
+                className={`status ${
                   book.disponible ? "available" : "borrowed"
                 }`}
               >
-                {book.disponible ? "✅ Disponible" : "📚 Emprunté"}
+                <i
+                  className={`fas ${
+                    book.disponible ? "fa-check-circle" : "fa-book-reader"
+                  }`}
+                ></i>
+                {book.disponible ? "Disponible" : "Emprunté"}
               </span>
             </div>
             <div className="book-details">
@@ -320,15 +329,17 @@ const BookList: React.FC = () => {
             </div>
             <div className="book-actions">
               <button
-                className="btn small secondary"
+                className="btn small secondary btn-icon"
                 onClick={() => handleEditBook(book)}
               >
+                <i className="fas fa-edit"></i>
                 Modifier
               </button>
               <button
-                className="btn small danger"
+                className="btn small danger btn-icon"
                 onClick={() => handleDeleteBook(book.id)}
               >
+                <i className="fas fa-trash"></i>
                 Supprimer
               </button>
             </div>

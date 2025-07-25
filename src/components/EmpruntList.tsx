@@ -94,16 +94,34 @@ const EmpruntList: React.FC = () => {
     }
   };
 
-  const getStatusColor = (statut: string) => {
+  const getStatusInfo = (
+    statut: string
+  ): { className: string; icon: string; label: string } => {
     switch (statut) {
       case "EN_COURS":
-        return "status-current";
+        return {
+          className: "status-current",
+          icon: "fa-clock",
+          label: "En cours",
+        };
       case "EN_RETARD":
-        return "status-overdue";
+        return {
+          className: "status-overdue",
+          icon: "fa-exclamation-triangle",
+          label: "En retard",
+        };
       case "RETOURNE":
-        return "status-returned";
+        return {
+          className: "status-returned",
+          icon: "fa-check-circle",
+          label: "Retourné",
+        };
       default:
-        return "";
+        return {
+          className: "status-current",
+          icon: "fa-clock",
+          label: "En cours",
+        };
     }
   };
 
@@ -267,9 +285,14 @@ const EmpruntList: React.FC = () => {
                   </td>
                   <td>
                     <span
-                      className={`status ${getStatusColor(emprunt.statut)}`}
+                      className={`status ${
+                        getStatusInfo(emprunt.statut).className
+                      }`}
                     >
-                      {emprunt.statut.replace("_", " ")}
+                      <i
+                        className={`fas ${getStatusInfo(emprunt.statut).icon}`}
+                      ></i>
+                      {getStatusInfo(emprunt.statut).label}
                     </span>
                   </td>
                   <td className="actions">
@@ -278,7 +301,7 @@ const EmpruntList: React.FC = () => {
                         className="btn small primary"
                         onClick={() => handleReturnBook(emprunt.id)}
                       >
-                        📖 Retourner
+                        <i className="fas fa-check"></i> Retourner le livre
                       </button>
                     )}
                   </td>

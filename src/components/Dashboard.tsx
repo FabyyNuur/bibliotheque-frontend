@@ -185,7 +185,9 @@ const Dashboard: React.FC = () => {
 
       <div className="stats-grid">
         <div className="stat-card users">
-          <div className="stat-icon">👥</div>
+          <div className="stat-icon">
+            <i className="fas fa-users"></i>
+          </div>
           <div className="stat-content">
             <h3>Utilisateurs</h3>
             <p className="stat-number">{stats.totalUsers}</p>
@@ -193,7 +195,9 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="stat-card books">
-          <div className="stat-icon">📚</div>
+          <div className="stat-icon">
+            <i className="fas fa-book"></i>
+          </div>
           <div className="stat-content">
             <h3>Total Livres</h3>
             <p className="stat-number">{stats.totalBooks}</p>
@@ -201,7 +205,9 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="stat-card available">
-          <div className="stat-icon">✅</div>
+          <div className="stat-icon">
+            <i className="fas fa-check-circle"></i>
+          </div>
           <div className="stat-content">
             <h3>Livres Disponibles</h3>
             <p className="stat-number">{stats.availableBooks}</p>
@@ -209,7 +215,9 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="stat-card loans">
-          <div className="stat-icon">📖</div>
+          <div className="stat-icon">
+            <i className="fas fa-book-open"></i>
+          </div>
           <div className="stat-content">
             <h3>Emprunts en cours</h3>
             <p className="stat-number">{stats.currentLoans}</p>
@@ -217,7 +225,9 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="stat-card overdue">
-          <div className="stat-icon">⚠️</div>
+          <div className="stat-icon">
+            <i className="fas fa-exclamation-triangle"></i>
+          </div>
           <div className="stat-content">
             <h3>Emprunts en retard</h3>
             <p className="stat-number">{stats.overdueLoans}</p>
@@ -229,28 +239,34 @@ const Dashboard: React.FC = () => {
         <h3>Actions rapides</h3>
         <div className="action-buttons">
           <button
-            className="action-btn primary"
+            className="action-btn primary btn-icon"
             onClick={() => openModal("book")}
           >
-            ➕ Ajouter un livre
+            <i className="fas fa-plus"></i>
+            Ajouter un livre
           </button>
           <button
-            className="action-btn secondary"
+            className="action-btn tertiary btn-icon"
             onClick={() => openModal("user")}
           >
-            👤 Nouveau utilisateur
+            <i className="fas fa-user-plus"></i>
+            Nouveau utilisateur
           </button>
           <button
-            className="action-btn tertiary"
+            className="action-btn tertiary btn-icon"
             onClick={() => openModal("emprunt")}
           >
-            📋 Nouvel emprunt
+            <i className="fas fa-clipboard-list"></i>
+            Nouvel emprunt
           </button>
         </div>
       </div>
 
       <div className="books-overview">
-        <h3>📚 Aperçu des livres récents</h3>
+        <h3>
+          <i className="fas fa-book" style={{ marginRight: "10px" }}></i>
+          Aperçu des livres récents
+        </h3>
         <div className="books-grid">
           {recentBooks.length > 0 ? (
             recentBooks.map((book: any) => (
@@ -266,7 +282,14 @@ const Dashboard: React.FC = () => {
                         book.disponible ? "available" : "unavailable"
                       }`}
                     >
-                      {book.disponible ? "✅ Disponible" : "❌ Emprunté"}
+                      <i
+                        className={`fas ${
+                          book.disponible
+                            ? "fa-check-circle"
+                            : "fa-times-circle"
+                        }`}
+                      ></i>
+                      {book.disponible ? "Disponible" : "Emprunté"}
                     </span>
                   </div>
                 </div>
@@ -293,7 +316,10 @@ const Dashboard: React.FC = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             {modal.type === "book" && (
               <div>
-                <h3>Ajouter un nouveau livre</h3>
+                <h3>
+                  <i className="fas fa-plus"></i>
+                  Ajouter un nouveau livre
+                </h3>
                 <form onSubmit={handleCreateBook}>
                   <div className="form-group">
                     <label>Titre:</label>
@@ -368,14 +394,16 @@ const Dashboard: React.FC = () => {
                     />
                   </div>
                   <div className="form-actions">
-                    <button type="submit" className="btn-primary">
+                    <button type="submit" className="btn-primary btn-icon">
+                      <i className="fas fa-save"></i>
                       Créer
                     </button>
                     <button
                       type="button"
                       onClick={closeModal}
-                      className="btn-secondary"
+                      className="btn-secondary btn-icon"
                     >
+                      <i className="fas fa-times"></i>
                       Annuler
                     </button>
                   </div>
@@ -385,7 +413,10 @@ const Dashboard: React.FC = () => {
 
             {modal.type === "user" && (
               <div>
-                <h3>Ajouter un nouvel utilisateur</h3>
+                <h3>
+                  <i className="fas fa-user-plus"></i>
+                  Ajouter un nouvel utilisateur
+                </h3>
                 <form onSubmit={handleCreateUser}>
                   <div className="form-group">
                     <label>Nom:</label>
@@ -421,14 +452,16 @@ const Dashboard: React.FC = () => {
                     />
                   </div>
                   <div className="form-actions">
-                    <button type="submit" className="btn-primary">
+                    <button type="submit" className="btn-primary btn-icon">
+                      <i className="fas fa-save"></i>
                       Créer
                     </button>
                     <button
                       type="button"
                       onClick={closeModal}
-                      className="btn-secondary"
+                      className="btn-secondary btn-icon"
                     >
+                      <i className="fas fa-times"></i>
                       Annuler
                     </button>
                   </div>
@@ -438,7 +471,10 @@ const Dashboard: React.FC = () => {
 
             {modal.type === "emprunt" && (
               <div>
-                <h3>Créer un nouvel emprunt</h3>
+                <h3>
+                  <i className="fas fa-clipboard-list"></i>
+                  Créer un nouvel emprunt
+                </h3>
                 <form onSubmit={handleCreateEmprunt}>
                   <div className="form-group">
                     <label>Utilisateur:</label>
@@ -481,14 +517,16 @@ const Dashboard: React.FC = () => {
                     </select>
                   </div>
                   <div className="form-actions">
-                    <button type="submit" className="btn-primary">
+                    <button type="submit" className="btn-primary btn-icon">
+                      <i className="fas fa-save"></i>
                       Créer
                     </button>
                     <button
                       type="button"
                       onClick={closeModal}
-                      className="btn-secondary"
+                      className="btn-secondary btn-icon"
                     >
+                      <i className="fas fa-times"></i>
                       Annuler
                     </button>
                   </div>

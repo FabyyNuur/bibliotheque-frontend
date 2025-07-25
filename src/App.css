@@ -232,9 +232,68 @@ body {
   background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
 }
 
+.btn.info {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  color: white;
+}
+
+.btn.info:hover {
+  background: linear-gradient(135deg, #138496 0%, #0f6674 100%);
+}
+
 .btn.small {
   padding: 0.5rem 1rem;
   font-size: 0.8rem;
+}
+
+/* Icônes Font Awesome dans les boutons */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.btn-icon i {
+  font-size: 0.9em;
+}
+
+/* Boutons avec seulement une icône (sans texte) */
+.btn-icon-only {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
+.btn.small.btn-icon-only {
+  padding: 0.5rem;
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+}
+
+/* Amélioration de l'espacement pour les boutons avec icônes ET texte */
+.btn.btn-icon {
+  padding-left: 0.75rem;
+  padding-right: 1rem;
+}
+
+.btn.small.btn-icon {
+  padding: 0.4rem 0.8rem;
+  gap: 0.3rem;
+}
+
+.btn.small.btn-icon i {
+  font-size: 0.8em;
+}
+
+/* Correction pour les boutons actions qui n'ont que des icônes */
+.actions .btn.btn-icon:not(:has(text)) {
+  justify-content: center;
+  padding: 0.5rem;
+  min-width: 2.2rem;
 }
 
 /* Dashboard */
@@ -519,20 +578,47 @@ body {
 }
 
 .book-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.book-status i {
+  font-size: 0.85em;
 }
 
 .book-status.available {
-  background-color: #e8f5e8;
-  color: #f7901c;
+  background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+  color: #155724;
+  border-color: #c3e6cb;
+  box-shadow: 0 2px 4px rgba(21, 87, 36, 0.1);
+}
+
+.book-status.available:hover {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(21, 87, 36, 0.15);
 }
 
 .book-status.unavailable {
-  background-color: #ffeaea;
-  color: #d63031;
+  background: linear-gradient(135deg, #ffeaea 0%, #f8d7da 100%);
+  color: #721c24;
+  border-color: #f5c6cb;
+  box-shadow: 0 2px 4px rgba(114, 28, 36, 0.1);
+}
+
+.book-status.unavailable:hover {
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(114, 28, 36, 0.15);
 }
 
 .no-books {
@@ -676,24 +762,52 @@ body {
   line-height: 1.4;
 }
 
-.availability {
+.availability,
+.status {
   padding: 0.4rem 0.8rem;
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-.availability.available {
-  background-color: #d4f4dd;
-  color: #f7901c;
+.availability i,
+.status i {
+  font-size: 0.8em;
 }
 
-.availability.borrowed {
-  background-color: #f5e6d3;
-  color: #8b4513;
+.availability.available,
+.status.available {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.availability.available:hover,
+.status.available:hover {
+  background: linear-gradient(135deg, #c3e6cb 0%, #b3d7ba 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(21, 87, 36, 0.2);
+}
+
+.availability.borrowed,
+.status.borrowed {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.availability.borrowed:hover,
+.status.borrowed:hover {
+  background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(133, 100, 4, 0.2);
 }
 
 .book-details {
@@ -762,6 +876,9 @@ body {
   padding: 1.5rem;
   border-top: 1px solid #f5e6d3;
   background-color: #faf8f5;
+  display: flex;
+  gap: 0.8rem;
+  justify-content: flex-end;
 }
 
 /* Tables - Thème Vert & Beige */
@@ -803,25 +920,48 @@ body {
   background-color: rgba(74, 124, 35, 0.05);
 }
 
-/* Status */
+/* Status Badges - Design moderne avec icônes */
 .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.4rem 0.8rem;
-  border-radius: 15px;
+  border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  display: inline-block;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status i {
+  font-size: 0.85em;
 }
 
 .status.active {
-  background-color: #d4f4dd;
-  color: #f7901c;
+  background: linear-gradient(135deg, #d4f4dd 0%, #c3e6cb 100%);
+  color: #155724;
+  border-color: #b8e6c1;
+}
+
+.status.active:hover {
+  background: linear-gradient(135deg, #c3e6cb 0%, #b8e6c1 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(21, 87, 36, 0.15);
 }
 
 .status.inactive {
-  background-color: #f8d7da;
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
   color: #721c24;
+  border-color: #f1b0b7;
+}
+
+.status.inactive:hover {
+  background: linear-gradient(135deg, #f5c6cb 0%, #f1b0b7 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(114, 28, 36, 0.15);
 }
 
 /* Filters */
@@ -917,6 +1057,243 @@ body {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: #fefcf8;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border: 1px solid #f5e6d3;
+  max-width: 800px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 2rem;
+  position: relative;
+}
+
+.modal-content h3 {
+  color: #f7901c;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #f5e6d3;
+  padding-bottom: 0.5rem;
+}
+
+.user-info {
+  background: #faf8f5;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #f0ede8;
+  margin-bottom: 2rem;
+}
+
+.user-basic-info h4 {
+  color: #68350e;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.user-basic-info p {
+  margin-bottom: 0.5rem;
+  color: #495057;
+}
+
+.user-basic-info strong {
+  color: #68350e;
+  font-weight: 600;
+}
+
+.user-emprunts h4 {
+  color: #68350e;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f0ede8;
+}
+
+.emprunts-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #f0ede8;
+  border-radius: 8px;
+  background: #faf8f5;
+}
+
+.emprunt-card {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #f0ede8;
+  align-items: start;
+}
+
+.emprunt-card:last-child {
+  border-bottom: none;
+}
+
+.emprunt-book strong {
+  color: #68350e;
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.emprunt-book p {
+  color: #8b7355;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.emprunt-dates p {
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  color: #495057;
+}
+
+.emprunt-dates strong {
+  color: #68350e;
+  font-weight: 500;
+}
+
+.emprunt-status {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.status-returned {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #155724;
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid #b8e6c1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(21, 87, 36, 0.1);
+}
+
+.status-returned i {
+  font-size: 0.85em;
+}
+
+.status-returned:hover {
+  background: linear-gradient(135deg, #c3e6cb 0%, #b8e6c1 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(21, 87, 36, 0.15);
+}
+
+.status-overdue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #721c24;
+  background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid #f1b0b7;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(114, 28, 36, 0.1);
+}
+
+.status-overdue i {
+  font-size: 0.85em;
+}
+
+.status-overdue:hover {
+  background: linear-gradient(135deg, #f5c6cb 0%, #f1b0b7 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(114, 28, 36, 0.15);
+}
+
+.status-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #856404;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid #ffd93d;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(133, 100, 4, 0.1);
+}
+
+.status-current i {
+  font-size: 0.85em;
+}
+
+.status-current:hover {
+  background: linear-gradient(135deg, #ffeaa7 0%, #ffd93d 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(133, 100, 4, 0.15);
+}
+
+.no-emprunts {
+  text-align: center;
+  color: #8b7355;
+  font-style: italic;
+  padding: 2rem;
+  background: #faf8f5;
+  border-radius: 8px;
+  border: 1px solid #f0ede8;
+}
+
+.modal-content .form-actions {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0ede8;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #8b7355 0%, #a8956d 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(135deg, #68350e 0%, #8b7355 100%);
 }
 
 /* Responsive Breakpoints */
@@ -1228,4 +1605,91 @@ body {
   font-size: 0.75rem;
   font-weight: 500;
   margin: 0.25rem 0.25rem 0.25rem 0;
+}
+
+/* Styles pour les détails utilisateur */
+.user-info {
+  margin-bottom: 2rem;
+}
+
+.user-basic-info {
+  background: #f8f9fa;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.user-basic-info h4 {
+  color: #f7901c;
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+}
+
+.user-basic-info p {
+  margin-bottom: 0.5rem;
+  color: #2d3436;
+}
+
+.user-emprunts h4 {
+  color: #f7901c;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.emprunts-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.emprunt-card {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1rem;
+  align-items: start;
+}
+
+.emprunt-book strong {
+  color: #2d3436;
+  font-size: 1.1rem;
+}
+
+.emprunt-book p {
+  color: #6c757d;
+  font-style: italic;
+  margin: 0.25rem 0 0 0;
+}
+
+.emprunt-dates p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.emprunt-status {
+  display: flex;
+  align-items: center;
+}
+
+.no-emprunts {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 2rem;
+}
+
+/* Responsive pour les cartes d'emprunt */
+@media (max-width: 768px) {
+  .emprunt-card {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .user-basic-info {
+    padding: 1rem;
+  }
 }
