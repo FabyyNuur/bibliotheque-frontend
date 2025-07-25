@@ -35,6 +35,7 @@ const Dashboard: React.FC = () => {
     isbn: "",
     anneePublication: new Date().getFullYear(),
     genre: "",
+    description: "",
   });
   const [userForm, setUserForm] = useState({ nom: "", prenom: "", email: "" });
   const [empruntForm, setEmpruntForm] = useState({
@@ -43,6 +44,7 @@ const Dashboard: React.FC = () => {
   });
   const [users, setUsers] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
+  const [recentBooks, setRecentBooks] = useState<any[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -51,12 +53,21 @@ const Dashboard: React.FC = () => {
 
   const loadUsersAndBooks = async () => {
     try {
-      const [usersData, booksData] = await Promise.all([
+      const [usersData, booksData, allBooksData] = await Promise.all([
         userService.getAllUsers(),
         bookService.getAvailableBooks(),
+        bookService.getAllBooks(),
       ]);
       setUsers(usersData);
       setBooks(booksData);
+      // Prendre les 5 livres les plus récents
+      const sortedBooks = allBooksData
+        .sort(
+          (a: any, b: any) =>
+            new Date(b.dateAjout).getTime() - new Date(a.dateAjout).getTime()
+        )
+        .slice(0, 5);
+      setRecentBooks(sortedBooks);
     } catch (err) {
       console.error(
         "Erreur lors du chargement des utilisateurs et livres:",
@@ -105,6 +116,7 @@ const Dashboard: React.FC = () => {
       isbn: "",
       anneePublication: new Date().getFullYear(),
       genre: "",
+      description: "",
     });
     setUserForm({ nom: "", prenom: "", email: "" });
     setEmpruntForm({ utilisateurId: "", livreId: "" });
@@ -120,6 +132,7 @@ const Dashboard: React.FC = () => {
         isbn: bookForm.isbn,
         anneePublication: bookForm.anneePublication,
         genre: bookForm.genre,
+        description: bookForm.description,
       });
       closeModal();
       loadDashboardData();
@@ -236,6 +249,44 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      <div className="books-overview">
+        <h3>📚 Aperçu des livres récents</h3>
+        <div className="books-grid">
+          {recentBooks.length > 0 ? (
+            recentBooks.map((book: any) => (
+              <div key={book.id} className="book-card">
+                <div className="book-info">
+                  <h4 className="book-title">{book.titre}</h4>
+                  <p className="book-author">par {book.auteur}</p>
+                  <p className="book-genre">{book.genre}</p>
+                  <div className="book-details">
+                    <span className="book-year">{book.anneePublication}</span>
+                    <span
+                      className={`book-status ${
+                        book.disponible ? "available" : "unavailable"
+                      }`}
+                    >
+                      {book.disponible ? "✅ Disponible" : "❌ Emprunté"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="no-books">
+              <p>
+                Aucun livre trouvé. Commencez par ajouter des livres à votre
+                bibliothèque.
+              </p>
+            </div>
+          )}
+        </div>
+        {recentBooks.length > 0 && (
+          <div className="view-all-books">
+            <p>Affichage des {recentBooks.length} livres les plus récents</p>
+          </div>
+        )}
+      </div>
       {/* Modals */}
       {modal.isOpen && (
         <div className="modal-overlay" onClick={closeModal}>
@@ -300,6 +351,20 @@ const Dashboard: React.FC = () => {
                         setBookForm({ ...bookForm, genre: e.target.value })
                       }
                       required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Description:</label>
+                    <textarea
+                      value={bookForm.description}
+                      onChange={(e) =>
+                        setBookForm({
+                          ...bookForm,
+                          description: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      placeholder="Description du livre (optionnelle)"
                     />
                   </div>
                   <div className="form-actions">

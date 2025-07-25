@@ -18,6 +18,7 @@ const BookList: React.FC = () => {
     isbn: "",
     anneePublication: new Date().getFullYear(),
     genre: "",
+    description: "",
   });
 
   useEffect(() => {
@@ -25,22 +26,6 @@ const BookList: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    filterBooks();
-  }, [books, searchQuery, filterAvailable]);
-
-  const loadBooks = async () => {
-    try {
-      setLoading(true);
-      const data = await bookService.getAllBooks();
-      setBooks(data);
-    } catch (err) {
-      setError("Erreur lors du chargement des livres");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterBooks = () => {
     let filtered = books;
 
     if (filterAvailable) {
@@ -57,6 +42,18 @@ const BookList: React.FC = () => {
     }
 
     setFilteredBooks(filtered);
+  }, [books, searchQuery, filterAvailable]);
+
+  const loadBooks = async () => {
+    try {
+      setLoading(true);
+      const data = await bookService.getAllBooks();
+      setBooks(data);
+    } catch (err) {
+      setError("Erreur lors du chargement des livres");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateBook = async (e: React.FormEvent) => {
@@ -69,6 +66,7 @@ const BookList: React.FC = () => {
         isbn: "",
         anneePublication: new Date().getFullYear(),
         genre: "",
+        description: "",
       });
       setShowCreateForm(false);
       loadBooks();
@@ -85,6 +83,7 @@ const BookList: React.FC = () => {
       isbn: book.isbn,
       anneePublication: book.anneePublication,
       genre: book.genre,
+      description: book.description || "",
     });
     setShowEditForm(true);
     setShowCreateForm(false);
@@ -101,6 +100,7 @@ const BookList: React.FC = () => {
         isbn: newBook.isbn,
         anneePublication: newBook.anneePublication,
         genre: newBook.genre,
+        description: newBook.description,
       });
       setNewBook({
         titre: "",
@@ -108,6 +108,7 @@ const BookList: React.FC = () => {
         isbn: "",
         anneePublication: new Date().getFullYear(),
         genre: "",
+        description: "",
       });
       setShowEditForm(false);
       setEditingBook(null);
@@ -126,6 +127,7 @@ const BookList: React.FC = () => {
       isbn: "",
       anneePublication: new Date().getFullYear(),
       genre: "",
+      description: "",
     });
   };
 
@@ -246,6 +248,14 @@ const BookList: React.FC = () => {
               }
               required
             />
+            <textarea
+              placeholder="Description (optionnelle)"
+              value={newBook.description}
+              onChange={(e) =>
+                setNewBook({ ...newBook, description: e.target.value })
+              }
+              rows={3}
+            />
           </div>
           <div className="form-actions">
             <button type="submit" className="btn primary">
@@ -282,21 +292,31 @@ const BookList: React.FC = () => {
             </div>
             <div className="book-details">
               <p>
-                <strong>Auteur:</strong> {book.auteur}
+                <strong>Auteur:</strong>
+                <span>{book.auteur}</span>
               </p>
               <p>
-                <strong>Genre:</strong> {book.genre}
+                <strong>Genre:</strong>
+                <span>{book.genre}</span>
               </p>
               <p>
-                <strong>ISBN:</strong> {book.isbn}
+                <strong>ISBN:</strong>
+                <span>{book.isbn}</span>
               </p>
               <p>
-                <strong>Année:</strong> {book.anneePublication}
+                <strong>Année:</strong>
+                <span>{book.anneePublication}</span>
               </p>
-              <p>
-                <strong>Ajouté le:</strong>{" "}
-                {new Date(book.dateAjout).toLocaleDateString()}
+              <p className="full-width">
+                <strong>Ajouté le:</strong>
+                <span>{new Date(book.dateAjout).toLocaleDateString()}</span>
               </p>
+              {book.description && (
+                <p className="full-width description">
+                  <strong>Description:</strong>
+                  <span>{book.description}</span>
+                </p>
+              )}
             </div>
             <div className="book-actions">
               <button
