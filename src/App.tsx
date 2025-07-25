@@ -12,7 +12,7 @@ function App() {
       <div className="App">
         <nav className="navbar">
           <div className="nav-container">
-            <h1 className="nav-title">📚 Bibliothèque Management</h1>
+            <h1 className="nav-title"> Bibliothèque Management</h1>
             <ul className="nav-menu">
               <li>
                 <Link to="/" className="nav-link">
