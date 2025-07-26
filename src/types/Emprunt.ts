@@ -24,5 +24,6 @@ export interface EmpruntAvecDetails extends Emprunt {
     titre: string;
     auteur: string;
     isbn: string;
+    nombreExemplaires: number;
   };
 }

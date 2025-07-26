@@ -36,6 +36,7 @@ const Dashboard: React.FC = () => {
     anneePublication: new Date().getFullYear(),
     genre: "",
     description: "",
+    nombreExemplaires: 1,
   });
   const [userForm, setUserForm] = useState({ nom: "", prenom: "", email: "" });
   const [empruntForm, setEmpruntForm] = useState({
@@ -45,6 +46,7 @@ const Dashboard: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
   const [recentBooks, setRecentBooks] = useState<any[]>([]);
+  const [empruntsEnCours, setEmpruntsEnCours] = useState<any[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -53,13 +55,16 @@ const Dashboard: React.FC = () => {
 
   const loadUsersAndBooks = async () => {
     try {
-      const [usersData, booksData, allBooksData] = await Promise.all([
-        userService.getAllUsers(),
-        bookService.getAvailableBooks(),
-        bookService.getAllBooks(),
-      ]);
+      const [usersData, booksData, allBooksData, empruntsData] =
+        await Promise.all([
+          userService.getAllUsers(),
+          bookService.getAvailableBooks(),
+          bookService.getAllBooks(),
+          empruntService.getAllEmpruntsEnCours(),
+        ]);
       setUsers(usersData);
       setBooks(booksData);
+      setEmpruntsEnCours(empruntsData);
       // Prendre les 5 livres les plus récents
       const sortedBooks = allBooksData
         .sort(
@@ -117,6 +122,7 @@ const Dashboard: React.FC = () => {
       anneePublication: new Date().getFullYear(),
       genre: "",
       description: "",
+      nombreExemplaires: 1,
     });
     setUserForm({ nom: "", prenom: "", email: "" });
     setEmpruntForm({ utilisateurId: "", livreId: "" });
@@ -133,6 +139,7 @@ const Dashboard: React.FC = () => {
         anneePublication: bookForm.anneePublication,
         genre: bookForm.genre,
         description: bookForm.description,
+        nombreExemplaires: bookForm.nombreExemplaires,
       });
       closeModal();
       loadDashboardData();
@@ -269,32 +276,68 @@ const Dashboard: React.FC = () => {
         </h3>
         <div className="books-grid">
           {recentBooks.length > 0 ? (
-            recentBooks.map((book: any) => (
-              <div key={book.id} className="book-card">
-                <div className="book-info">
-                  <h4 className="book-title">{book.titre}</h4>
-                  <p className="book-author">par {book.auteur}</p>
-                  <p className="book-genre">{book.genre}</p>
-                  <div className="book-details">
-                    <span className="book-year">{book.anneePublication}</span>
-                    <span
-                      className={`book-status ${
-                        book.disponible ? "available" : "unavailable"
-                      }`}
-                    >
-                      <i
-                        className={`fas ${
-                          book.disponible
-                            ? "fa-check-circle"
-                            : "fa-times-circle"
-                        }`}
-                      ></i>
-                      {book.disponible ? "Disponible" : "Emprunté"}
-                    </span>
+            recentBooks.map((book: any) => {
+              const empruntes = empruntsEnCours.filter(
+                (emprunt) => emprunt.livreId === book.id
+              ).length;
+              const disponibles = book.nombreExemplaires - empruntes;
+              const allEmprunted = empruntes >= book.nombreExemplaires;
+
+              return (
+                <div key={book.id} className="book-card">
+                  <div className="book-info">
+                    <h4 className="book-title">{book.titre}</h4>
+                    <p className="book-author">par {book.auteur}</p>
+                    <p className="book-genre">{book.genre}</p>
+                    <div className="book-details">
+                      <span className="book-year">{book.anneePublication}</span>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          alignItems: "center",
+                        }}
+                      >
+                        <span
+                          className="book-status"
+                          style={{
+                            background: allEmprunted ? "#f8d7da" : "#d4edda",
+                            color: allEmprunted ? "#721c24" : "#155724",
+                            borderRadius: "8px",
+                            padding: "2px 8px",
+                            fontWeight: 600,
+                            fontSize: "12px",
+                            minWidth: "80px",
+                            display: "inline-block",
+                            textAlign: "center",
+                          }}
+                        >
+                          {allEmprunted ? "EMPRUNTÉ" : "Disponible"}
+                        </span>
+                        {!allEmprunted && (
+                          <span
+                            style={{
+                              background: "#f8f9fa",
+                              color: "#495057",
+                              borderRadius: "8px",
+                              padding: "2px 8px",
+                              fontWeight: 600,
+                              fontSize: "12px",
+                              minWidth: "40px",
+                              display: "inline-block",
+                              textAlign: "center",
+                              border: "1px solid #dee2e6",
+                            }}
+                          >
+                            {disponibles}/{book.nombreExemplaires}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="no-books">
               <p>
@@ -391,6 +434,21 @@ const Dashboard: React.FC = () => {
                       }
                       rows={3}
                       placeholder="Description du livre (optionnelle)"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Nombre d'exemplaires:</label>
+                    <input
+                      type="number"
+                      value={bookForm.nombreExemplaires}
+                      onChange={(e) =>
+                        setBookForm({
+                          ...bookForm,
+                          nombreExemplaires: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      min="1"
+                      required
                     />
                   </div>
                   <div className="form-actions">

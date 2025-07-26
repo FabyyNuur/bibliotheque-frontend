@@ -148,21 +148,20 @@ const EmpruntList: React.FC = () => {
       <div className="header">
         <h2>Gestion des Emprunts</h2>
         <div style={{ display: "flex", gap: "10px" }}>
-  <button
-              className={`btn ${filter === "history" ? "active" : "secondary"}`}
-              onClick={() => setFilter("history")}
-               style={{ borderRadius: "8px" }}
-            >
-              Historiques
-            </button>
-        <button
-          className="btn primary"
-          onClick={() => setShowCreateForm(!showCreateForm)}
-        >
-          {showCreateForm ? "Annuler" : "➕ Nouvel emprunt"}
-        </button>
+          <button
+            className={`btn ${filter === "history" ? "active" : "secondary"}`}
+            onClick={() => setFilter("history")}
+            style={{ borderRadius: "8px" }}
+          >
+            Historiques
+          </button>
+          <button
+            className="btn primary"
+            onClick={() => setShowCreateForm(!showCreateForm)}
+          >
+            {showCreateForm ? "Annuler" : "➕ Nouvel emprunt"}
+          </button>
         </div>
-        
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -194,7 +193,7 @@ const EmpruntList: React.FC = () => {
             <button
               className={`btn ${filter === "current" ? "active" : "secondary"}`}
               onClick={() => setFilter("current")}
-               style={{ borderRadius: "8px" }}
+              style={{ borderRadius: "8px" }}
             >
               En cours
             </button>
@@ -206,7 +205,6 @@ const EmpruntList: React.FC = () => {
               En retard
             </button>
           </div>
-
         </div>
       </div>
 
@@ -275,23 +273,32 @@ const EmpruntList: React.FC = () => {
               <th>Livre</th>
               <th>Date d'emprunt</th>
               <th>Retour prévu</th>
-                   <th>{filter === "history" ? "Durée" : "Jours restants"}</th>
+              {filter === "history" && <th>Retour réel</th>}
+              <th>{filter === "history" ? "Durée" : "Jours restants"}</th>
               <th>Statut</th>
-              <th>Actions</th>
+              {filter !== "history" && <th>Actions</th>}
             </tr>
           </thead>
           <tbody>
-            {/* {(filter === "history"
-              ? emprunts.filter((emprunt) => emprunt.statut === "RETOURNE")
-              : emprunts
-            ).map((emprunt) => {
-              const daysRemaining = getDaysRemaining(
-                emprunt.dateRetourPrevu.toString()
-              ); */}
             {emprunts.map((emprunt) => {
               const daysRemaining = getDaysRemaining(
                 emprunt.dateRetourPrevu.toString()
               );
+
+              // Calcul de la durée pour l'historique
+              const getDuration = () => {
+                if (filter === "history" && emprunt.dateRetourEffectif) {
+                  const dateEmprunt = new Date(emprunt.dateEmprunt);
+                  const dateRetour = new Date(emprunt.dateRetourEffectif);
+                  const diffTime = dateRetour.getTime() - dateEmprunt.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  return `${diffDays} jours`;
+                }
+                return null;
+              };
+
+              const duration = getDuration();
+
               return (
                 <tr key={emprunt.id}>
                   <td>
@@ -314,20 +321,33 @@ const EmpruntList: React.FC = () => {
                   <td>
                     {new Date(emprunt.dateRetourPrevu).toLocaleDateString()}
                   </td>
+                  {filter === "history" && (
+                    <td>
+                      {emprunt.dateRetourEffectif
+                        ? new Date(
+                            emprunt.dateRetourEffectif
+                          ).toLocaleDateString()
+                        : "-"}
+                    </td>
+                  )}
                   <td>
-                    <span
-                      className={
-                        daysRemaining < 0
-                          ? "overdue"
-                          : daysRemaining <= 3
-                          ? "warning"
-                          : "normal"
-                      }
-                    >
-                      {daysRemaining < 0
-                        ? `${Math.abs(daysRemaining)} jours de retard`
-                        : `${daysRemaining} jours`}
-                    </span>
+                    {filter === "history" ? (
+                      <span className="normal">{duration || "-"}</span>
+                    ) : (
+                      <span
+                        className={
+                          daysRemaining < 0
+                            ? "overdue"
+                            : daysRemaining <= 3
+                            ? "warning"
+                            : "normal"
+                        }
+                      >
+                        {daysRemaining < 0
+                          ? `${Math.abs(daysRemaining)} jours de retard`
+                          : `${daysRemaining} jours`}
+                      </span>
+                    )}
                   </td>
                   <td>
                     <span
@@ -341,16 +361,18 @@ const EmpruntList: React.FC = () => {
                       {getStatusInfo(emprunt.statut).label}
                     </span>
                   </td>
-                  <td className="actions">
-                    {emprunt.statut === "EN_COURS" && (
-                      <button
-                        className="btn small primary"
-                        onClick={() => handleReturnBook(emprunt.id)}
-                      >
-                        <i className="fas fa-check"></i> Retourner le livre
-                      </button>
-                    )}
-                  </td>
+                  {filter !== "history" && (
+                    <td className="actions">
+                      {emprunt.statut === "EN_COURS" && (
+                        <button
+                          className="btn small primary"
+                          onClick={() => handleReturnBook(emprunt.id)}
+                        >
+                          <i className="fas fa-check"></i> Retourner le livre
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}

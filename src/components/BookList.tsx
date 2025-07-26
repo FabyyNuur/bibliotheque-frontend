@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { bookService } from "../services/bookService";
 import { Book, CreateBookRequest } from "../types/Book";
+import { empruntService } from "../services/empruntService";
 
 const BookList: React.FC = () => {
   const [books, setBooks] = useState<Book[]>([]);
@@ -19,17 +20,25 @@ const BookList: React.FC = () => {
     anneePublication: new Date().getFullYear(),
     genre: "",
     description: "",
+    nombreExemplaires: 1,
   });
+  const [empruntsEnCours, setEmpruntsEnCours] = useState<any[]>([]);
 
   useEffect(() => {
     loadBooks();
+    loadEmpruntsEnCours();
   }, []);
 
   useEffect(() => {
     let filtered = books;
 
     if (filterAvailable) {
-      filtered = filtered.filter((book) => book.disponible);
+      filtered = filtered.filter((book) => {
+        const empruntes = empruntsEnCours.filter(
+          (emprunt) => emprunt.livreId === book.id
+        ).length;
+        return book.nombreExemplaires - empruntes > 0;
+      });
     }
 
     if (searchQuery) {
@@ -42,7 +51,7 @@ const BookList: React.FC = () => {
     }
 
     setFilteredBooks(filtered);
-  }, [books, searchQuery, filterAvailable]);
+  }, [books, searchQuery, filterAvailable, empruntsEnCours]);
 
   const loadBooks = async () => {
     try {
@@ -53,6 +62,15 @@ const BookList: React.FC = () => {
       setError("Erreur lors du chargement des livres");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadEmpruntsEnCours = async () => {
+    try {
+      const data = await empruntService.getAllEmpruntsEnCours();
+      setEmpruntsEnCours(data);
+    } catch (err) {
+      console.error("Erreur lors du chargement des emprunts:", err);
     }
   };
 
@@ -67,6 +85,7 @@ const BookList: React.FC = () => {
         anneePublication: new Date().getFullYear(),
         genre: "",
         description: "",
+        nombreExemplaires: 1,
       });
       setShowCreateForm(false);
       loadBooks();
@@ -84,6 +103,7 @@ const BookList: React.FC = () => {
       anneePublication: book.anneePublication,
       genre: book.genre,
       description: book.description || "",
+      nombreExemplaires: book.nombreExemplaires,
     });
     setShowEditForm(true);
     setShowCreateForm(false);
@@ -101,6 +121,7 @@ const BookList: React.FC = () => {
         anneePublication: newBook.anneePublication,
         genre: newBook.genre,
         description: newBook.description,
+        nombreExemplaires: newBook.nombreExemplaires,
       });
       setNewBook({
         titre: "",
@@ -109,6 +130,7 @@ const BookList: React.FC = () => {
         anneePublication: new Date().getFullYear(),
         genre: "",
         description: "",
+        nombreExemplaires: 1,
       });
       setShowEditForm(false);
       setEditingBook(null);
@@ -128,6 +150,7 @@ const BookList: React.FC = () => {
       anneePublication: new Date().getFullYear(),
       genre: "",
       description: "",
+      nombreExemplaires: 1,
     });
   };
 
@@ -258,6 +281,19 @@ const BookList: React.FC = () => {
               }
               rows={3}
             />
+            <input
+              type="number"
+              placeholder="Nombre d'exemplaires"
+              value={newBook.nombreExemplaires}
+              onChange={(e) =>
+                setNewBook({
+                  ...newBook,
+                  nombreExemplaires: parseInt(e.target.value) || 1,
+                })
+              }
+              min="1"
+              required
+            />
           </div>
           <div className="form-actions">
             <button type="submit" className="btn primary btn-icon">
@@ -279,72 +315,115 @@ const BookList: React.FC = () => {
       )}
 
       <div className="books-grid">
-        {filteredBooks.map((book) => (
-          <div
-            key={book.id}
-            className={`book-card ${!book.disponible ? "unavailable" : ""}`}
-          >
-            <div className="book-header">
-              <h3>{book.titre}</h3>
-              <span
-                className={`status ${
-                  book.disponible ? "available" : "borrowed"
-                }`}
-              >
-                <i
-                  className={`fas ${
-                    book.disponible ? "fa-check-circle" : "fa-book-reader"
-                  }`}
-                ></i>
-                {book.disponible ? "Disponible" : "Emprunté"}
-              </span>
-            </div>
-            <div className="book-details">
-              <p>
-                <strong>Auteur:</strong>
-                <span>{book.auteur}</span>
-              </p>
-              <p>
-                <strong>Genre:</strong>
-                <span>{book.genre}</span>
-              </p>
-              <p>
-                <strong>ISBN:</strong>
-                <span>{book.isbn}</span>
-              </p>
-              <p>
-                <strong>Année:</strong>
-                <span>{book.anneePublication}</span>
-              </p>
-              <p className="full-width">
-                <strong>Ajouté le:</strong>
-                <span>{new Date(book.dateAjout).toLocaleDateString()}</span>
-              </p>
-              {book.description && (
-                <p className="full-width description">
-                  <strong>Description:</strong>
-                  <span>{book.description}</span>
+        {filteredBooks.map((book) => {
+          const empruntes = empruntsEnCours.filter(
+            (emprunt) => emprunt.livreId === book.id
+          ).length;
+          const disponibles = book.nombreExemplaires - empruntes;
+          const allEmprunted = empruntes >= book.nombreExemplaires;
+
+          return (
+            <div
+              key={book.id}
+              className={`book-card ${allEmprunted ? "unavailable" : ""}`}
+            >
+              <div className="book-header">
+                <h3>{book.titre}</h3>
+                <span className="status">
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span
+                      className="badge"
+                      style={{
+                        background: allEmprunted ? "#f8d7da" : "#d4edda",
+                        color: allEmprunted ? "#721c24" : "#155724",
+                        borderRadius: "8px",
+                        padding: "2px 8px",
+                        fontWeight: 600,
+                        minWidth: "80px",
+                        display: "inline-block",
+                        textAlign: "center",
+                      }}
+                    >
+                      {allEmprunted ? "EMPRUNTÉ" : "Disponible"}
+                    </span>
+                    {!allEmprunted && (
+                      <span
+                        style={{
+                          background: "#f8f9fa",
+                          color: "#495057",
+                          borderRadius: "8px",
+                          padding: "2px 8px",
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          minWidth: "40px",
+                          display: "inline-block",
+                          textAlign: "center",
+                          border: "1px solid #dee2e6",
+                        }}
+                      >
+                        {disponibles}/{book.nombreExemplaires}
+                      </span>
+                    )}
+                  </div>
+                </span>
+              </div>
+              <div className="book-details">
+                <p>
+                  <strong>Auteur:</strong>
+                  <span>{book.auteur}</span>
                 </p>
-              )}
+                <p>
+                  <strong>Genre:</strong>
+                  <span>{book.genre}</span>
+                </p>
+                <p>
+                  <strong>ISBN:</strong>
+                  <span>{book.isbn}</span>
+                </p>
+                <p>
+                  <strong>Année:</strong>
+                  <span>{book.anneePublication}</span>
+                </p>
+                <p>
+                  <strong>Exemplaires:</strong>
+                  <span>{book.nombreExemplaires}</span>
+                </p>
+                <p className="full-width">
+                  <strong>Ajouté le:</strong>
+                  <span>{new Date(book.dateAjout).toLocaleDateString()}</span>
+                </p>
+                {book.description && (
+                  <p className="full-width description">
+                    <strong>Description:</strong>
+                    <span>{book.description}</span>
+                  </p>
+                )}
+              </div>
+              <div className="book-actions">
+                <button
+                  className="btn small secondary btn-icon"
+                  onClick={() => handleEditBook(book)}
+                >
+                  <i className="fas fa-edit"></i>
+                  Modifier
+                </button>
+                <button
+                  className="btn small danger btn-icon"
+                  onClick={() => handleDeleteBook(book.id)}
+                >
+                  <i className="fas fa-trash"></i>
+                  Supprimer
+                </button>
+              </div>
             </div>
-            <div className="book-actions">
-              <button
-                className="btn small secondary btn-icon"
-                onClick={() => handleEditBook(book)}
-              >
-                <i className="fas fa-edit"></i>
-                Modifier
-              </button>
-              <button
-                className="btn small danger btn-icon"
-                onClick={() => handleDeleteBook(book.id)}
-              >
-                <i className="fas fa-trash"></i>
-                Supprimer
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filteredBooks.length === 0 && (
