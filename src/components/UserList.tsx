@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { userService } from "../services/userService";
 import { empruntService } from "../services/empruntService";
-import { User, CreateUserRequest } from "../types/User";
+import { User, CreateUserRequest, UserRole } from "../types/User";
+import PasswordInput from "./PasswordInput";
+import { useAuth } from "../context/AuthContext";
 
 const UserList: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +21,8 @@ const UserList: React.FC = () => {
     nom: "",
     prenom: "",
     email: "",
+    password: "",
+    role: "LECTEUR",
   });
 
   // Fonction utilitaire pour formater les dates
@@ -210,7 +215,7 @@ const UserList: React.FC = () => {
     e.preventDefault();
     try {
       await userService.createUser(newUser);
-      setNewUser({ nom: "", prenom: "", email: "" });
+      setNewUser({ nom: "", prenom: "", email: "", password: "", role: "LECTEUR" });
       setShowCreateForm(false);
       loadUsers();
     } catch (err) {
@@ -224,6 +229,8 @@ const UserList: React.FC = () => {
       nom: user.nom,
       prenom: user.prenom,
       email: user.email,
+      password: "",
+      role: user.role,
     });
     setShowEditForm(true);
     setShowCreateForm(false);
@@ -238,8 +245,9 @@ const UserList: React.FC = () => {
         nom: newUser.nom,
         prenom: newUser.prenom,
         email: newUser.email,
+        role: newUser.role,
       });
-      setNewUser({ nom: "", prenom: "", email: "" });
+      setNewUser({ nom: "", prenom: "", email: "", password: "", role: "LECTEUR" });
       setShowEditForm(false);
       setEditingUser(null);
       loadUsers();
@@ -251,28 +259,46 @@ const UserList: React.FC = () => {
   const cancelEdit = () => {
     setShowEditForm(false);
     setEditingUser(null);
-    setNewUser({ nom: "", prenom: "", email: "" });
+    setNewUser({ nom: "", prenom: "", email: "", password: "", role: "LECTEUR" });
   };
 
+  const isCurrentUser = (userId: string) => currentUser?.id === userId;
+
   const handleDeleteUser = async (id: string) => {
+    if (isCurrentUser(id)) {
+      setError("Vous ne pouvez pas supprimer votre propre compte");
+      return;
+    }
+
     if (
       window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")
     ) {
       try {
         await userService.deleteUser(id);
         loadUsers();
-      } catch (err) {
-        setError("Erreur lors de la suppression de l'utilisateur");
+      } catch (err: unknown) {
+        const message =
+          (err as { response?: { data?: { error?: string } } })?.response?.data
+            ?.error || "Erreur lors de la suppression de l'utilisateur";
+        setError(message);
       }
     }
   };
 
   const toggleUserStatus = async (user: User) => {
+    if (isCurrentUser(user.id) && user.actif) {
+      setError("Vous ne pouvez pas désactiver votre propre compte");
+      return;
+    }
+
     try {
       await userService.updateUser(user.id, { actif: !user.actif });
       loadUsers();
-    } catch (err) {
-      setError("Erreur lors de la mise à jour du statut");
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error || "Erreur lors de la mise à jour du statut";
+      setError(message);
     }
   };
 
@@ -347,6 +373,30 @@ const UserList: React.FC = () => {
               }
               required
             />
+            {!showEditForm && (
+              <PasswordInput
+                placeholder="Mot de passe (min. 6 caractères)"
+                value={newUser.password}
+                onChange={(e) =>
+                  setNewUser({ ...newUser, password: e.target.value })
+                }
+                required
+                minLength={6}
+                autoComplete="new-password"
+              />
+            )}
+            <select
+              value={newUser.role || "LECTEUR"}
+              onChange={(e) =>
+                setNewUser({
+                  ...newUser,
+                  role: e.target.value as UserRole,
+                })
+              }
+            >
+              <option value="LECTEUR">Lecteur</option>
+              <option value="BIBLIOTHECAIRE">Bibliothécaire</option>
+            </select>
           </div>
           <div className="form-actions">
             <button type="submit" className="btn primary btn-icon">
@@ -375,6 +425,7 @@ const UserList: React.FC = () => {
               <th>Prénom</th>
               <th>Email</th>
               <th>Date d'inscription</th>
+              <th>Rôle</th>
               <th>Statut</th>
               <th>Actions</th>
             </tr>
@@ -386,6 +437,11 @@ const UserList: React.FC = () => {
                 <td>{user.prenom}</td>
                 <td>{user.email}</td>
                 <td>{formatDate(user.dateInscription)}</td>
+                <td>
+                  <span className="role-badge">
+                    {user.role === "BIBLIOTHECAIRE" ? "Bibliothécaire" : "Lecteur"}
+                  </span>
+                </td>
                 <td>
                   <span
                     className={`status ${user.actif ? "active" : "inactive"}`}
@@ -413,25 +469,34 @@ const UserList: React.FC = () => {
                   >
                     <i className="fas fa-edit"></i>
                   </button>
-                  <button
-                    className="btn small secondary btn-icon"
-                    onClick={() => toggleUserStatus(user)}
-                    title={user.actif ? "Désactiver" : "Activer"}
-                  >
-                    <i
-                      className={`fas ${
-                        user.actif ? "fa-toggle-off" : "fa-toggle-on"
-                      }`}
-                    ></i>
-                    {user.actif ? "Désactiver" : "Activer"}
-                  </button>
-                  <button
-                    className="btn small danger btn-icon-only"
-                    onClick={() => handleDeleteUser(user.id)}
-                    title="Supprimer"
-                  >
-                    <i className="fas fa-trash"></i>
-                  </button>
+                  {!(isCurrentUser(user.id) && user.actif) && (
+                    <button
+                      className="btn small secondary btn-icon"
+                      onClick={() => toggleUserStatus(user)}
+                      title={user.actif ? "Désactiver" : "Activer"}
+                    >
+                      <i
+                        className={`fas ${
+                          user.actif ? "fa-toggle-off" : "fa-toggle-on"
+                        }`}
+                      ></i>
+                      {user.actif ? "Désactiver" : "Activer"}
+                    </button>
+                  )}
+                  {isCurrentUser(user.id) && user.actif && (
+                    <span className="self-account-hint" title="Compte connecté">
+                      <i className="fas fa-user-shield"></i> Vous
+                    </span>
+                  )}
+                  {!isCurrentUser(user.id) && (
+                    <button
+                      className="btn small danger btn-icon-only"
+                      onClick={() => handleDeleteUser(user.id)}
+                      title="Supprimer"
+                    >
+                      <i className="fas fa-trash"></i>
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -462,6 +527,12 @@ const UserList: React.FC = () => {
                 <p>
                   <strong>Date d'inscription:</strong>{" "}
                   {formatDate(selectedUser.dateInscription)}
+                </p>
+                <p>
+                  <strong>Rôle:</strong>{" "}
+                  {selectedUser.role === "BIBLIOTHECAIRE"
+                    ? "Bibliothécaire"
+                    : "Lecteur"}
                 </p>
                 <p>
                   <strong>Statut:</strong>

@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { bookService } from "../services/bookService";
 import { Book, CreateBookRequest } from "../types/Book";
 import { empruntService } from "../services/empruntService";
+import { useAuth } from "../context/AuthContext";
 
 const BookList: React.FC = () => {
+  const { isAuthenticated, isBibliothecaire } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
@@ -22,23 +25,17 @@ const BookList: React.FC = () => {
     description: "",
     nombreExemplaires: 1,
   });
-  const [empruntsEnCours, setEmpruntsEnCours] = useState<any[]>([]);
+  const [borrowingId, setBorrowingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadBooks();
-    loadEmpruntsEnCours();
   }, []);
 
   useEffect(() => {
     let filtered = books;
 
     if (filterAvailable) {
-      filtered = filtered.filter((book) => {
-        const empruntes = empruntsEnCours.filter(
-          (emprunt) => emprunt.livreId === book.id
-        ).length;
-        return book.nombreExemplaires - empruntes > 0;
-      });
+      filtered = filtered.filter((book) => book.disponible && book.nombreExemplaires > 0);
     }
 
     if (searchQuery) {
@@ -46,31 +43,23 @@ const BookList: React.FC = () => {
         (book) =>
           book.titre.toLowerCase().includes(searchQuery.toLowerCase()) ||
           book.auteur.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          book.genre.toLowerCase().includes(searchQuery.toLowerCase())
+          book.genre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          book.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     setFilteredBooks(filtered);
-  }, [books, searchQuery, filterAvailable, empruntsEnCours]);
+  }, [books, searchQuery, filterAvailable]);
 
   const loadBooks = async () => {
     try {
       setLoading(true);
       const data = await bookService.getAllBooks();
       setBooks(data);
-    } catch (err) {
+    } catch {
       setError("Erreur lors du chargement des livres");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadEmpruntsEnCours = async () => {
-    try {
-      const data = await empruntService.getAllEmpruntsEnCours();
-      setEmpruntsEnCours(data);
-    } catch (err) {
-      console.error("Erreur lors du chargement des emprunts:", err);
     }
   };
 
@@ -89,7 +78,7 @@ const BookList: React.FC = () => {
       });
       setShowCreateForm(false);
       loadBooks();
-    } catch (err) {
+    } catch {
       setError("Erreur lors de la création du livre");
     }
   };
@@ -135,7 +124,7 @@ const BookList: React.FC = () => {
       setShowEditForm(false);
       setEditingBook(null);
       loadBooks();
-    } catch (err) {
+    } catch {
       setError("Erreur lors de la modification du livre");
     }
   };
@@ -159,9 +148,28 @@ const BookList: React.FC = () => {
       try {
         await bookService.deleteBook(id);
         loadBooks();
-      } catch (err) {
+      } catch {
         setError("Erreur lors de la suppression du livre");
       }
+    }
+  };
+
+  const handleBorrow = async (bookId: string) => {
+    setError(null);
+    setSuccess(null);
+    setBorrowingId(bookId);
+    try {
+      await empruntService.createEmprunt({ livreId: bookId });
+      setSuccess("Emprunt créé avec succès !");
+      loadBooks();
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data
+          ?.error ||
+        "Impossible d'emprunter ce livre. Vous avez peut-être déjà un emprunt en cours.";
+      setError(message);
+    } finally {
+      setBorrowingId(null);
     }
   };
 
@@ -170,40 +178,39 @@ const BookList: React.FC = () => {
   return (
     <div className="book-list">
       <div className="header">
-        <h2>Gestion des Livres</h2>
-        <div className="header-buttons">
-          {showEditForm && (
-            <button className="btn secondary btn-icon" onClick={cancelEdit}>
-              <i className="fas fa-times"></i>
-              Annuler modification
+        <h2>{isBibliothecaire ? "Gestion des Livres" : "Catalogue des Livres"}</h2>
+        {isBibliothecaire && (
+          <div className="header-buttons">
+            {showEditForm && (
+              <button className="btn secondary btn-icon" onClick={cancelEdit}>
+                <i className="fas fa-times"></i>
+                Annuler modification
+              </button>
+            )}
+            <button
+              className="btn primary btn-icon"
+              onClick={() => {
+                if (showEditForm) {
+                  cancelEdit();
+                } else {
+                  setShowCreateForm(!showCreateForm);
+                }
+              }}
+            >
+              <i className="fas fa-plus"></i>
+              {showCreateForm ? "Annuler" : "Nouveau livre"}
             </button>
-          )}
-          <button
-            className="btn primary btn-icon"
-            onClick={() => {
-              if (showEditForm) {
-                cancelEdit();
-              } else {
-                setShowCreateForm(!showCreateForm);
-              }
-            }}
-          >
-            <i className="fas fa-plus"></i>
-            {showCreateForm
-              ? "Annuler"
-              : showEditForm
-              ? "Nouveau livre"
-              : "Nouveau livre"}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
 
       {error && <div className="error">{error}</div>}
+      {success && <div className="success">{success}</div>}
 
       <div className="filters">
         <input
           type="text"
-          placeholder="Rechercher par titre, auteur ou genre..."
+          placeholder="Rechercher par titre, auteur, genre ou description..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="search-input"
@@ -218,7 +225,7 @@ const BookList: React.FC = () => {
         </label>
       </div>
 
-      {(showCreateForm || showEditForm) && (
+      {isBibliothecaire && (showCreateForm || showEditForm) && (
         <form
           className="create-form"
           onSubmit={showEditForm ? handleUpdateBook : handleCreateBook}
@@ -316,16 +323,12 @@ const BookList: React.FC = () => {
 
       <div className="books-grid">
         {filteredBooks.map((book) => {
-          const empruntes = empruntsEnCours.filter(
-            (emprunt) => emprunt.livreId === book.id
-          ).length;
-          const disponibles = book.nombreExemplaires - empruntes;
-          const allEmprunted = empruntes >= book.nombreExemplaires;
+          const isAvailable = book.disponible && book.nombreExemplaires > 0;
 
           return (
             <div
               key={book.id}
-              className={`book-card ${allEmprunted ? "unavailable" : ""}`}
+              className={`book-card ${!isAvailable ? "unavailable" : ""}`}
             >
               <div className="book-header">
                 <h3>{book.titre}</h3>
@@ -340,8 +343,8 @@ const BookList: React.FC = () => {
                     <span
                       className="badge"
                       style={{
-                        background: allEmprunted ? "#f8d7da" : "#d4edda",
-                        color: allEmprunted ? "#721c24" : "#155724",
+                        background: isAvailable ? "#d4edda" : "#f8d7da",
+                        color: isAvailable ? "#155724" : "#721c24",
                         borderRadius: "8px",
                         padding: "2px 8px",
                         fontWeight: 600,
@@ -350,9 +353,9 @@ const BookList: React.FC = () => {
                         textAlign: "center",
                       }}
                     >
-                      {allEmprunted ? "EMPRUNTÉ" : "Disponible"}
+                      {isAvailable ? "Disponible" : "Indisponible"}
                     </span>
-                    {!allEmprunted && (
+                    {isAvailable && (
                       <span
                         style={{
                           background: "#f8f9fa",
@@ -367,7 +370,7 @@ const BookList: React.FC = () => {
                           border: "1px solid #dee2e6",
                         }}
                       >
-                        {disponibles}/{book.nombreExemplaires}
+                        {book.nombreExemplaires} ex.
                       </span>
                     )}
                   </div>
@@ -390,13 +393,9 @@ const BookList: React.FC = () => {
                   <strong>Année:</strong>
                   <span>{book.anneePublication}</span>
                 </p>
-                <p>
-                  <strong>Exemplaires:</strong>
-                  <span>{book.nombreExemplaires}</span>
-                </p>
                 <p className="full-width">
                   <strong>Ajouté le:</strong>
-                  <span>{new Date(book.dateAjout).toLocaleDateString()}</span>
+                  <span>{new Date(book.dateAjout).toLocaleDateString("fr-FR")}</span>
                 </p>
                 {book.description && (
                   <p className="full-width description">
@@ -406,20 +405,34 @@ const BookList: React.FC = () => {
                 )}
               </div>
               <div className="book-actions">
-                <button
-                  className="btn small secondary btn-icon"
-                  onClick={() => handleEditBook(book)}
-                >
-                  <i className="fas fa-edit"></i>
-                  Modifier
-                </button>
-                <button
-                  className="btn small danger btn-icon"
-                  onClick={() => handleDeleteBook(book.id)}
-                >
-                  <i className="fas fa-trash"></i>
-                  Supprimer
-                </button>
+                {isBibliothecaire && (
+                  <>
+                    <button
+                      className="btn small secondary btn-icon"
+                      onClick={() => handleEditBook(book)}
+                    >
+                      <i className="fas fa-edit"></i>
+                      Modifier
+                    </button>
+                    <button
+                      className="btn small danger btn-icon"
+                      onClick={() => handleDeleteBook(book.id)}
+                    >
+                      <i className="fas fa-trash"></i>
+                      Supprimer
+                    </button>
+                  </>
+                )}
+                {isAuthenticated && !isBibliothecaire && isAvailable && (
+                  <button
+                    className="btn small primary btn-icon"
+                    onClick={() => handleBorrow(book.id)}
+                    disabled={borrowingId === book.id}
+                  >
+                    <i className="fas fa-book-reader"></i>
+                    {borrowingId === book.id ? "Emprunt..." : "Emprunter"}
+                  </button>
+                )}
               </div>
             </div>
           );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { empruntService } from "../services/empruntService";
 import { userService } from "../services/userService";
 import { bookService } from "../services/bookService";
@@ -16,21 +16,34 @@ const EmpruntList: React.FC = () => {
   const [filter, setFilter] = useState<
     "all" | "current" | "overdue" | "history"
   >("all");
-  const [newEmprunt, setNewEmprunt] = useState<CreateEmpruntRequest>({
+  const [newEmprunt, setNewEmprunt] = useState<{
+    utilisateurId: string;
+    livreId: string;
+    dureeEmprunt: number;
+  }>({
     utilisateurId: "",
     livreId: "",
     dureeEmprunt: 14,
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const loadEmpruntsByFilter = useCallback(async () => {
+    switch (filter) {
+      case "current":
+        return empruntService.getAllEmpruntsEnCours();
+      case "overdue":
+        return empruntService.getEmpruntsEnRetard();
+      case "history":
+        return empruntService.getEmpruntsHistorique();
+      default:
+        return empruntService.getAllEmpruntsEnCours();
+    }
+  }, [filter]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [empruntsData, usersData, booksData] = await Promise.all([
-        empruntService.getAllEmpruntsEnCours(),
+        loadEmpruntsByFilter(),
         userService.getAllUsers(),
         bookService.getAvailableBooks(),
       ]);
@@ -42,40 +55,23 @@ const EmpruntList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadEmpruntsByFilter = async () => {
-    try {
-      let data;
-      switch (filter) {
-        case "current":
-          data = await empruntService.getAllEmpruntsEnCours();
-          break;
-        case "overdue":
-          data = await empruntService.getEmpruntsEnRetard();
-          break;
-        case "history":
-          data = await empruntService.getEmpruntsHistorique();
-          break;
-        default:
-          data = await empruntService.getAllEmpruntsEnCours();
-      }
-      setEmprunts(data);
-    } catch (err) {
-      setError("Erreur lors du chargement des emprunts");
-    }
-  };
+  }, [loadEmpruntsByFilter]);
 
   useEffect(() => {
-    if (!loading) {
-      loadEmpruntsByFilter();
-    }
-  }, [filter]);
+    loadData();
+  }, [loadData]);
 
   const handleCreateEmprunt = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await empruntService.createEmprunt(newEmprunt);
+      const payload: CreateEmpruntRequest = {
+        livreId: newEmprunt.livreId,
+        dureeEmprunt: newEmprunt.dureeEmprunt,
+      };
+      if (newEmprunt.utilisateurId) {
+        payload.utilisateurId = newEmprunt.utilisateurId;
+      }
+      await empruntService.createEmprunt(payload);
       setNewEmprunt({
         utilisateurId: "",
         livreId: "",

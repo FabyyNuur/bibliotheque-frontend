@@ -1,9 +1,14 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { AuthProvider } from './context/AuthContext';
 import App from './App';
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+test('affiche le titre de la bibliothèque', () => {
+  render(
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  );
+  const titleElement = screen.getByText(/Nuur Library Management/i);
+  expect(titleElement).toBeInTheDocument();
 });

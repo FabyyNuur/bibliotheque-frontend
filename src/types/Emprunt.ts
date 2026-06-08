@@ -2,15 +2,15 @@ export interface Emprunt {
   id: string;
   utilisateurId: string;
   livreId: string;
-  dateEmprunt: Date;
-  dateRetourPrevu: Date;
-  dateRetourEffectif?: Date;
+  dateEmprunt: string;
+  dateRetourPrevu: string;
+  dateRetourEffectif?: string;
   statut: 'EN_COURS' | 'RETOURNE' | 'EN_RETARD';
 }
 
 export interface CreateEmpruntRequest {
-  utilisateurId: string;
   livreId: string;
+  utilisateurId?: string;
   dureeEmprunt?: number;
 }
 
