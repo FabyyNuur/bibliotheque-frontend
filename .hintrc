@@ -15,7 +15,8 @@
       {
         "ignore": [
           "position: sticky",
-          "-webkit-text-size-adjust"
+          "-webkit-text-size-adjust",
+          "user-select"
         ]
       }
     ],
