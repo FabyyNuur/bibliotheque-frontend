@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { empruntService } from "../services/empruntService";
 import { userService } from "../services/userService";
 import { bookService } from "../services/bookService";
@@ -17,6 +17,7 @@ const EmpruntList: React.FC = () => {
   const [filter, setFilter] = useState<
     "all" | "current" | "overdue" | "history"
   >("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [newEmprunt, setNewEmprunt] = useState<{
     utilisateurId: string;
     livreId: string;
@@ -130,6 +131,24 @@ const EmpruntList: React.FC = () => {
     }
   };
 
+  const filteredEmprunts = useMemo(() => {
+    if (!searchQuery.trim()) return emprunts;
+
+    const query = searchQuery.toLowerCase();
+    return emprunts.filter((emprunt) => {
+      const statusLabel = getStatusInfo(emprunt.statut).label.toLowerCase();
+      return (
+        emprunt.utilisateur.nom.toLowerCase().includes(query) ||
+        emprunt.utilisateur.prenom.toLowerCase().includes(query) ||
+        emprunt.utilisateur.email.toLowerCase().includes(query) ||
+        emprunt.livre.titre.toLowerCase().includes(query) ||
+        emprunt.livre.auteur.toLowerCase().includes(query) ||
+        emprunt.livre.isbn.toLowerCase().includes(query) ||
+        statusLabel.includes(query)
+      );
+    });
+  }, [emprunts, searchQuery]);
+
   const getDaysRemaining = (dateRetourPrevu: string) => {
     const today = new Date();
     const dueDate = new Date(dateRetourPrevu);
@@ -165,6 +184,13 @@ const EmpruntList: React.FC = () => {
       {error && <div className="error">{error}</div>}
 
       <div className="filters">
+        <input
+          type="text"
+          placeholder="Rechercher par lecteur, livre, ISBN ou statut..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
         <div
           className="filter-buttons"
           style={{
@@ -278,7 +304,7 @@ const EmpruntList: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {emprunts.map((emprunt) => {
+            {filteredEmprunts.map((emprunt) => {
               const daysRemaining = getDaysRemaining(
                 emprunt.dateRetourPrevu.toString()
               );
@@ -378,9 +404,13 @@ const EmpruntList: React.FC = () => {
         </table>
       </div>
 
-      {emprunts.length === 0 && (
+      {filteredEmprunts.length === 0 && (
         <div className="empty-state">
-          <p>Aucun emprunt trouvé</p>
+          <p>
+            {searchQuery
+              ? "Aucun emprunt ne correspond à votre recherche"
+              : "Aucun emprunt trouvé"}
+          </p>
         </div>
       )}
     </div>
