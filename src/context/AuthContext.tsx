@@ -6,9 +6,8 @@ import React, {
   useState,
 } from 'react';
 import { authService } from '../services/authService';
-import { userService } from '../services/userService';
 import { setStoredToken, getStoredToken } from '../services/apiClient';
-import { CreateUserRequest, User } from '../types/User';
+import { User } from '../types/User';
 import { isBibliothecaire } from '../constants/roles';
 
 interface AuthContextType {
@@ -16,8 +15,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isBibliothecaire: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: CreateUserRequest) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -67,18 +65,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => window.removeEventListener('auth:logout', handleLogout);
   }, [logout]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     const { user: loggedUser, token } = await authService.login({
       email,
       password,
     });
     setStoredToken(token);
     setUser(loggedUser);
-  };
-
-  const register = async (data: CreateUserRequest) => {
-    await userService.createUser(data);
-    await login(data.email, data.password);
+    return loggedUser;
   };
 
   return (
@@ -89,7 +83,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isAuthenticated: !!user,
         isBibliothecaire: user ? isBibliothecaire(user.role) : false,
         login,
-        register,
         logout,
         refreshUser,
       }}

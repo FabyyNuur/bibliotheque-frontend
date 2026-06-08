@@ -18,4 +18,8 @@ public final class TestDataFactory {
     public static String defaultPassword() {
         return "secret123";
     }
+
+    public static String defaultTemporaryPassword() {
+        return "ChangeMe123";
+    }
 }

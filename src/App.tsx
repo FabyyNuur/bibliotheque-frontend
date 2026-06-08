@@ -7,13 +7,13 @@ import BookList from "./components/BookList";
 import EmpruntList from "./components/EmpruntList";
 import Dashboard from "./components/Dashboard";
 import Login from "./components/Login";
-import Register from "./components/Register";
 import MesEmprunts from "./components/MesEmprunts";
 import Profile from "./components/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ChangePassword from "./components/ChangePassword";
 
 function AppContent() {
-  const { isAuthenticated, isBibliothecaire, user, logout, isLoading } = useAuth();
+  const { isAuthenticated, isBibliothecaire, logout, isLoading } = useAuth();
 
   if (isLoading) {
     return <div className="loading app-loading">Chargement...</div>;
@@ -92,7 +92,15 @@ function AppContent() {
       <main className="main-content">
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute>
+                <ChangePassword />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/books" element={<BookList />} />
           <Route
             path="/"

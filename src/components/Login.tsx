@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from './PasswordInput';
 
 const Login: React.FC = () => {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from =
@@ -16,6 +16,9 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   if (isAuthenticated) {
+    if (user?.mustChangePassword) {
+      return <Navigate to="/change-password" replace />;
+    }
     return <Navigate to={from} replace />;
   }
 
@@ -25,8 +28,13 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate(from, { replace: true });
+      const loggedUser = await login(email, password);
+
+      if (loggedUser.mustChangePassword) {
+        navigate('/change-password', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { error?: string } } })?.response?.data
@@ -42,7 +50,9 @@ const Login: React.FC = () => {
       <div className="auth-card">
         <h2>Connexion</h2>
         <p className="auth-subtitle">
-          Accédez à votre espace Nuur Library Management
+          Accédez à votre espace Nuur Library Management.
+          Les comptes sont créés par un bibliothécaire — connectez-vous avec
+          les identifiants reçus par email.
         </p>
 
         {error && <div className="error">{error}</div>}

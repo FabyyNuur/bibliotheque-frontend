@@ -43,7 +43,7 @@ class BibliothecaireFlowTest extends BaseTest {
     void creationUtilisateurEtEmprunt() {
         UserListPage userListPage = new UserListPage(driver);
         userListPage.open();
-        userListPage.createUser("Sel", "User", lecteurEmail, TestDataFactory.defaultPassword());
+        userListPage.createUser("Sel", "User", lecteurEmail);
         userListPage.search(lecteurEmail);
         Assertions.assertThat(userListPage.userExistsInTable(lecteurEmail)).isTrue();
 

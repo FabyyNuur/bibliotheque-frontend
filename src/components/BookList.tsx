@@ -3,6 +3,7 @@ import { bookService } from "../services/bookService";
 import { Book, CreateBookRequest } from "../types/Book";
 import { empruntService } from "../services/empruntService";
 import { useAuth } from "../context/AuthContext";
+import BookDetailModal from "./BookDetailModal";
 
 const BookList: React.FC = () => {
   const { isAuthenticated, isBibliothecaire } = useAuth();
@@ -27,6 +28,10 @@ const BookList: React.FC = () => {
   });
   const [borrowingId, setBorrowingId] = useState<string | null>(null);
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
+  const [detailBook, setDetailBook] = useState<Book | null>(null);
+
+  const openBookDetail = (book: Book) => setDetailBook(book);
+  const closeBookDetail = () => setDetailBook(null);
 
   useEffect(() => {
     loadBooks();
@@ -158,6 +163,7 @@ const BookList: React.FC = () => {
       try {
         await bookService.deleteBook(id);
         setSelectedBookIds((prev) => prev.filter((bookId) => bookId !== id));
+        if (detailBook?.id === id) setDetailBook(null);
         loadBooks();
       } catch {
         setError("Erreur lors de la suppression du livre");
@@ -227,6 +233,7 @@ const BookList: React.FC = () => {
     try {
       await empruntService.createEmprunt({ livreId: bookId });
       setSuccess("Emprunt créé avec succès !");
+      setDetailBook(null);
       loadBooks();
     } catch (err: unknown) {
       const message =
@@ -421,9 +428,10 @@ const BookList: React.FC = () => {
               className={`book-card ${!isAvailable ? "unavailable" : ""} ${
                 selectedBookIds.includes(book.id) ? "selected" : ""
               }`}
+              data-testid="book-card"
             >
-              <div className="book-header">
-                {isBibliothecaire && (
+              {isBibliothecaire && (
+                <div className="book-card-select">
                   <label className="row-select-checkbox" title="Sélectionner">
                     <input
                       type="checkbox"
@@ -432,79 +440,55 @@ const BookList: React.FC = () => {
                       data-testid="book-select"
                     />
                   </label>
-                )}
-                <h3>{book.titre}</h3>
-                <span className="status">
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <span
-                      className="badge"
-                      style={{
-                        background: isAvailable ? "#d4edda" : "#f8d7da",
-                        color: isAvailable ? "#155724" : "#721c24",
-                        borderRadius: "8px",
-                        padding: "2px 8px",
-                        fontWeight: 600,
-                        minWidth: "80px",
-                        display: "inline-block",
-                        textAlign: "center",
-                      }}
-                    >
-                      {isAvailable ? "Disponible" : "Indisponible"}
-                    </span>
-                    {isAvailable && (
-                      <span
-                        style={{
-                          background: "#f8f9fa",
-                          color: "#495057",
-                          borderRadius: "8px",
-                          padding: "2px 8px",
-                          fontWeight: 600,
-                          fontSize: "12px",
-                          minWidth: "40px",
-                          display: "inline-block",
-                          textAlign: "center",
-                          border: "1px solid #dee2e6",
-                        }}
-                      >
-                        {book.nombreExemplaires} ex.
-                      </span>
-                    )}
+                </div>
+              )}
+              <div className="book-card-body">
+                <div className="book-header">
+                  <div className="book-header-main">
+                    <h3>{book.titre}</h3>
+                    <p className="book-card-author">{book.auteur}</p>
                   </div>
-                </span>
-              </div>
-              <div className="book-details">
-                <p>
-                  <strong>Auteur:</strong>
-                  <span>{book.auteur}</span>
-                </p>
-                <p>
-                  <strong>Genre:</strong>
-                  <span>{book.genre}</span>
-                </p>
-                <p>
-                  <strong>ISBN:</strong>
-                  <span>{book.isbn}</span>
-                </p>
-                <p>
-                  <strong>Année:</strong>
-                  <span>{book.anneePublication}</span>
-                </p>
-                <p className="full-width">
-                  <strong>Ajouté le:</strong>
-                  <span>{new Date(book.dateAjout).toLocaleDateString("fr-FR")}</span>
-                </p>
-                {book.description && (
-                  <p className="full-width description">
-                    <strong>Description:</strong>
-                    <span>{book.description}</span>
-                  </p>
-                )}
+                  <div className="book-header-aside">
+                    <button
+                      type="button"
+                      className="book-detail-eye-btn"
+                      onClick={() => openBookDetail(book)}
+                      title="Voir les détails"
+                      aria-label={`Voir les détails de ${book.titre}`}
+                      data-testid="book-detail-btn"
+                    >
+                      <i className="fas fa-eye"></i>
+                    </button>
+                    <div className="book-card-badges">
+                      <span
+                        className={`book-badge ${
+                          isAvailable ? "book-badge-available" : "book-badge-unavailable"
+                        }`}
+                      >
+                        {isAvailable ? "Disponible" : "Indisponible"}
+                      </span>
+                      {isAvailable && (
+                        <span className="book-badge book-badge-stock">
+                          {book.nombreExemplaires} ex.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="book-details">
+                  <div className="book-meta-row">
+                    <span className="book-meta-item">{book.genre}</span>
+                    <span className="book-meta-sep">·</span>
+                    <span className="book-meta-item">{book.anneePublication}</span>
+                    <span className="book-meta-sep">·</span>
+                    <span className="book-meta-item book-meta-isbn">{book.isbn}</span>
+                  </div>
+                  {book.description && (
+                    <p className="book-card-desc" title={book.description}>
+                      {book.description}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="book-actions">
                 {isBibliothecaire && (
@@ -547,6 +531,18 @@ const BookList: React.FC = () => {
           <p>Aucun livre trouvé</p>
         </div>
       )}
+
+      <BookDetailModal
+        book={detailBook}
+        isOpen={detailBook !== null}
+        onClose={closeBookDetail}
+        isBibliothecaire={isBibliothecaire}
+        isAuthenticated={isAuthenticated}
+        borrowingId={borrowingId}
+        onBorrow={handleBorrow}
+        onEdit={handleEditBook}
+        onDelete={handleDeleteBook}
+      />
     </div>
   );
 };

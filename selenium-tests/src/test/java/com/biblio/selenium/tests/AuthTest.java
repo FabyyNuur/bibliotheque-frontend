@@ -1,10 +1,11 @@
 package com.biblio.selenium.tests;
 
+import com.biblio.selenium.config.TestConfig;
 import com.biblio.selenium.pages.DashboardPage;
-import com.biblio.selenium.pages.RegisterPage;
-import com.biblio.selenium.utils.TestDataFactory;
+import com.biblio.selenium.utils.WaitUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 
 class AuthTest extends BaseTest {
 
@@ -36,28 +37,23 @@ class AuthTest extends BaseTest {
     }
 
     @Test
-    void inscriptionLecteurRedirigeVersDashboard() {
-        RegisterPage registerPage = new RegisterPage(driver);
-        String email = TestDataFactory.uniqueEmail("register");
+    void routeInscriptionRedirigeVersConnexion() {
+        driver.get(TestConfig.getBaseUrl() + "/register");
 
-        registerPage.open();
-        registerPage.register("Dupont", "Marie", email, TestDataFactory.defaultPassword());
+        WaitUtils.createWait(driver).until(ExpectedConditions.urlContains("/login"));
+        Assertions.assertThat(loginPage.isDisplayed()).isTrue();
+    }
+
+    @Test
+    void lecteurCreeParBibliothecairePeutSeConnecter() {
+        loginAsBiblio();
+        String email = createLecteurAsBiblio("Dupont", "Marie");
+        navbarPage.logout();
+
+        loginAsNewLecteur(email);
 
         DashboardPage dashboardPage = new DashboardPage(driver);
         Assertions.assertThat(dashboardPage.isDisplayed()).isTrue();
         Assertions.assertThat(navbarPage.isLogoutVisible()).isTrue();
-    }
-
-    @Test
-    void inscriptionMotsDePasseDifferentsAfficheErreur() {
-        RegisterPage registerPage = new RegisterPage(driver);
-        registerPage.open();
-        registerPage.registerWithMismatchPassword(
-                "Test", "User", TestDataFactory.uniqueEmail("mismatch"),
-                "secret123", "different"
-        );
-
-        Assertions.assertThat(registerPage.getErrorMessage())
-                .contains("ne correspondent pas");
     }
 }

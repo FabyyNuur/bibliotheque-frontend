@@ -49,7 +49,7 @@ src/test/java/com/biblio/selenium/
 | Classe | Couverture |
 |--------|------------|
 | `SmokeTest` | Catalogue public, navbar |
-| `AuthTest` | Login, logout, inscription |
+| `AuthTest` | Login, logout, création compte par biblio |
 | `LecteurFlowTest` | Emprunt, profil |
 | `BibliothecaireFlowTest` | CRUD livre, utilisateurs, emprunts |
 | `RbacTest` | Accès refusé par rôle |

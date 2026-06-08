@@ -3,14 +3,26 @@ import { userService } from "../services/userService";
 import { empruntService } from "../services/empruntService";
 import { User, CreateUserRequest, UserRole } from "../types/User";
 import { getRoleLabel, USER_ROLES } from "../constants/roles";
-import PasswordInput from "./PasswordInput";
+import ConfirmModal from "./ConfirmModal";
 import { useAuth } from "../context/AuthContext";
+import { EmpruntAvecDetails } from "../types/Emprunt";
+
+interface PendingDelete {
+  userIds: string[];
+  users: { id: string; nom: string; prenom: string }[];
+  activeEmpruntsByUserId: Record<string, string[]>;
+  totalActiveLoans: number;
+}
+
+const isActiveEmprunt = (emprunt: EmpruntAvecDetails) =>
+  emprunt.statut !== "RETOURNE";
 
 const UserList: React.FC = () => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -18,15 +30,25 @@ const UserList: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userEmprunts, setUserEmprunts] = useState<any[]>([]);
   const [loadingEmprunts, setLoadingEmprunts] = useState(false);
-  const [newUser, setNewUser] = useState<CreateUserRequest>({
+  const [newUser, setNewUser] = useState<Omit<CreateUserRequest, "password">>({
     nom: "",
     prenom: "",
     email: "",
-    password: "",
     role: USER_ROLES.LECTEUR,
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    preparing: boolean;
+    loading: boolean;
+    pending: PendingDelete | null;
+  }>({
+    isOpen: false,
+    preparing: false,
+    loading: false,
+    pending: null,
+  });
 
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return users;
@@ -244,13 +266,37 @@ const UserList: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await userService.createUser(newUser);
-      setNewUser({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
-      setShowCreateForm(false);
+      setError(null);
+      setSuccess(null);
+      const created = await userService.createUser(newUser);
+      closeCreateModal();
       loadUsers();
+
+      if (created.emailSent === false) {
+        setError(
+          `Utilisateur créé, mais l'email n'a pas pu être envoyé à ${created.email}.`
+        );
+      } else if (created.emailSent) {
+        setSuccess(
+          `Utilisateur créé. Un email avec les identifiants a été envoyé à ${created.email}.`
+        );
+      } else {
+        setSuccess('Utilisateur créé avec succès.');
+      }
     } catch (err) {
       setError("Erreur lors de la création de l'utilisateur");
     }
+  };
+
+  const openCreateModal = () => {
+    cancelEdit();
+    setNewUser({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
+    setShowCreateForm(true);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateForm(false);
+    setNewUser({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
   };
 
   const handleEditUser = (user: User) => {
@@ -259,7 +305,6 @@ const UserList: React.FC = () => {
       nom: user.nom,
       prenom: user.prenom,
       email: user.email,
-      password: "",
       role: user.role,
     });
     setShowEditForm(true);
@@ -277,7 +322,7 @@ const UserList: React.FC = () => {
         email: newUser.email,
         role: newUser.role,
       });
-      setNewUser({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
+      setNewUser({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
       setShowEditForm(false);
       setEditingUser(null);
       loadUsers();
@@ -289,31 +334,75 @@ const UserList: React.FC = () => {
   const cancelEdit = () => {
     setShowEditForm(false);
     setEditingUser(null);
-    setNewUser({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
+    setNewUser({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
   };
 
   const isCurrentUser = (userId: string) => currentUser?.id === userId;
 
-  const handleDeleteUser = async (id: string) => {
+  const closeDeleteModal = () => {
+    setDeleteModal({
+      isOpen: false,
+      preparing: false,
+      loading: false,
+      pending: null,
+    });
+  };
+
+  const prepareDeleteModal = async (userIds: string[]) => {
+    const targets = users.filter((user) => userIds.includes(user.id));
+    if (targets.length === 0) return;
+
+    setDeleteModal({
+      isOpen: true,
+      preparing: true,
+      loading: false,
+      pending: null,
+    });
+
+    try {
+      const empruntResults = await Promise.all(
+        targets.map(async (user) => {
+          const emprunts = await empruntService.getEmpruntsByUserId(user.id);
+          const activeIds = emprunts
+            .filter(isActiveEmprunt)
+            .map((emprunt) => emprunt.id);
+          return { userId: user.id, activeIds };
+        })
+      );
+
+      const activeEmpruntsByUserId = Object.fromEntries(
+        empruntResults.map(({ userId, activeIds }) => [userId, activeIds])
+      );
+      const totalActiveLoans = empruntResults.reduce(
+        (sum, { activeIds }) => sum + activeIds.length,
+        0
+      );
+
+      setDeleteModal({
+        isOpen: true,
+        preparing: false,
+        loading: false,
+        pending: {
+          userIds: targets.map((user) => user.id),
+          users: targets.map(({ id, nom, prenom }) => ({ id, nom, prenom })),
+          activeEmpruntsByUserId,
+          totalActiveLoans,
+        },
+      });
+    } catch {
+      closeDeleteModal();
+      setError("Erreur lors de la préparation de la suppression");
+    }
+  };
+
+  const handleDeleteUser = (id: string) => {
     if (isCurrentUser(id)) {
       setError("Vous ne pouvez pas supprimer votre propre compte");
       return;
     }
 
-    if (
-      window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")
-    ) {
-      try {
-        await userService.deleteUser(id);
-        setSelectedUserIds((prev) => prev.filter((userId) => userId !== id));
-        loadUsers();
-      } catch (err: unknown) {
-        const message =
-          (err as { response?: { data?: { error?: string } } })?.response?.data
-            ?.error || "Erreur lors de la suppression de l'utilisateur";
-        setError(message);
-      }
-    }
+    setError(null);
+    prepareDeleteModal([id]);
   };
 
   const toggleUserSelection = (id: string) => {
@@ -337,29 +426,40 @@ const UserList: React.FC = () => {
     );
   };
 
-  const handleBulkDeleteUsers = async () => {
+  const handleBulkDeleteUsers = () => {
     const idsToDelete = selectedUserIds.filter((id) => !isCurrentUser(id));
     if (idsToDelete.length === 0) return;
 
-    const count = idsToDelete.length;
-    if (
-      !window.confirm(
-        `Êtes-vous sûr de vouloir supprimer ${count} utilisateur${count > 1 ? "s" : ""} ?`
-      )
-    ) {
-      return;
+    setError(null);
+    prepareDeleteModal(idsToDelete);
+  };
+
+  const confirmDeleteUsers = async () => {
+    const { pending } = deleteModal;
+    if (!pending) return;
+
+    setDeleteModal((prev) => ({ ...prev, loading: true }));
+
+    const { userIds, activeEmpruntsByUserId } = pending;
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const userId of userIds) {
+      try {
+        for (const empruntId of activeEmpruntsByUserId[userId] ?? []) {
+          await empruntService.returnBook(empruntId);
+        }
+        await userService.deleteUser(userId);
+        succeeded++;
+      } catch {
+        failed++;
+      }
     }
 
-    setError(null);
-
-    const results = await Promise.allSettled(
-      idsToDelete.map((id) => userService.deleteUser(id))
+    closeDeleteModal();
+    setSelectedUserIds((prev) =>
+      prev.filter((id) => !userIds.includes(id))
     );
-
-    const failed = results.filter((result) => result.status === "rejected").length;
-    const succeeded = count - failed;
-
-    setSelectedUserIds([]);
     loadUsers();
 
     if (failed > 0) {
@@ -369,6 +469,73 @@ const UserList: React.FC = () => {
           : `${succeeded} utilisateur${succeeded > 1 ? "s" : ""} supprimé${succeeded > 1 ? "s" : ""}, ${failed} échec${failed > 1 ? "s" : ""}.`
       );
     }
+  };
+
+  const buildDeleteMessage = (pending: PendingDelete) => {
+    const { users, userIds, totalActiveLoans } = pending;
+    const count = userIds.length;
+
+    if (count === 1) {
+      const user = users[0];
+      const name = `${user.prenom} ${user.nom}`;
+
+      if (totalActiveLoans > 0) {
+        return (
+          <>
+            <p>
+              <strong>{name}</strong> a {totalActiveLoans} emprunt
+              {totalActiveLoans > 1 ? "s" : ""} en cours.
+            </p>
+            <p>
+              Les livres seront automatiquement marqués comme retournés avant la
+              suppression de ce compte.
+            </p>
+            <p>Cette action est irréversible.</p>
+          </>
+        );
+      }
+
+      return (
+        <>
+          <p>
+            Êtes-vous sûr de vouloir supprimer <strong>{name}</strong> ?
+          </p>
+          <p>Cette action est irréversible.</p>
+        </>
+      );
+    }
+
+    const usersWithLoans = users.filter(
+      (user) => (pending.activeEmpruntsByUserId[user.id] ?? []).length > 0
+    ).length;
+
+    if (totalActiveLoans > 0) {
+      return (
+        <>
+          <p>
+            Vous allez supprimer <strong>{count} utilisateurs</strong>.
+          </p>
+          <p>
+            {usersWithLoans} d'entre eux ont des emprunts en cours — les livres
+            seront automatiquement marqués comme retournés.
+          </p>
+          <p>Cette action est irréversible.</p>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <p>
+          Êtes-vous sûr de vouloir supprimer{" "}
+          <strong>
+            {count} utilisateur{count > 1 ? "s" : ""}
+          </strong>{" "}
+          ?
+        </p>
+        <p>Cette action est irréversible.</p>
+      </>
+    );
   };
 
   const toggleUserStatus = async (user: User) => {
@@ -413,25 +580,17 @@ const UserList: React.FC = () => {
           )}
           <button
             className="btn primary btn-icon"
-            onClick={() => {
-              if (showEditForm) {
-                cancelEdit();
-              } else {
-                setShowCreateForm(!showCreateForm);
-              }
-            }}
+            onClick={openCreateModal}
+            data-testid="user-create-open"
           >
             <i className="fas fa-user-plus"></i>
-            {showCreateForm
-              ? "Annuler"
-              : showEditForm
-              ? "Nouvel utilisateur"
-              : "Nouvel utilisateur"}
+            Nouvel utilisateur
           </button>
         </div>
       </div>
 
       {error && <div className="error">{error}</div>}
+      {success && <div className="success">{success}</div>}
 
       <div className="filters">
         <input
@@ -443,16 +602,12 @@ const UserList: React.FC = () => {
         />
       </div>
 
-      {(showCreateForm || showEditForm) && (
+      {showEditForm && (
         <form
           className="create-form"
-          onSubmit={showEditForm ? handleUpdateUser : handleCreateUser}
+          onSubmit={handleUpdateUser}
         >
-          <h3>
-            {showEditForm
-              ? "Modifier l'utilisateur"
-              : "Créer un nouvel utilisateur"}
-          </h3>
+          <h3>Modifier l'utilisateur</h3>
           <div className="form-group">
             <input
               type="text"
@@ -479,18 +634,6 @@ const UserList: React.FC = () => {
               }
               required
             />
-            {!showEditForm && (
-              <PasswordInput
-                placeholder="Mot de passe (min. 6 caractères)"
-                value={newUser.password}
-                onChange={(e) =>
-                  setNewUser({ ...newUser, password: e.target.value })
-                }
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
-            )}
             <select
               value={newUser.role || USER_ROLES.LECTEUR}
               onChange={(e) =>
@@ -507,18 +650,16 @@ const UserList: React.FC = () => {
           <div className="form-actions">
             <button type="submit" className="btn primary btn-icon">
               <i className="fas fa-save"></i>
-              {showEditForm ? "Modifier" : "Créer"}
+              Modifier
             </button>
-            {showEditForm && (
-              <button
-                type="button"
-                className="btn secondary btn-icon"
-                onClick={cancelEdit}
-              >
-                <i className="fas fa-times"></i>
-                Annuler
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn secondary btn-icon"
+              onClick={cancelEdit}
+            >
+              <i className="fas fa-times"></i>
+              Annuler
+            </button>
           </div>
         </form>
       )}
@@ -648,6 +789,123 @@ const UserList: React.FC = () => {
               ? "Aucun utilisateur ne correspond à votre recherche"
               : "Aucun utilisateur trouvé"}
           </p>
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title={
+          deleteModal.pending && deleteModal.pending.userIds.length > 1
+            ? "Supprimer les utilisateurs"
+            : "Supprimer l'utilisateur"
+        }
+        message={
+          deleteModal.pending
+            ? buildDeleteMessage(deleteModal.pending)
+            : ""
+        }
+        confirmLabel="Supprimer"
+        onConfirm={confirmDeleteUsers}
+        onCancel={closeDeleteModal}
+        loading={deleteModal.loading}
+        preparing={deleteModal.preparing}
+        testId="user-delete-modal"
+      />
+
+      {showCreateForm && (
+        <div
+          className="modal-overlay"
+          onClick={closeCreateModal}
+          data-testid="user-create-modal"
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>
+              <i className="fas fa-user-plus"></i> Créer un nouvel utilisateur
+            </h3>
+            <form onSubmit={handleCreateUser}>
+              <div className="form-group">
+                <label htmlFor="create-user-nom">Nom</label>
+                <input
+                  id="create-user-nom"
+                  type="text"
+                  placeholder="Nom"
+                  value={newUser.nom}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, nom: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="create-user-prenom">Prénom</label>
+                <input
+                  id="create-user-prenom"
+                  type="text"
+                  placeholder="Prénom"
+                  value={newUser.prenom}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, prenom: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="create-user-email">Email</label>
+                <input
+                  id="create-user-email"
+                  type="email"
+                  placeholder="Email"
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, email: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <p className="form-hint">
+                Un email contenant les identifiants de connexion sera envoyé
+                à l'adresse indiquée. L'utilisateur devra changer son mot de
+                passe à la première connexion.
+              </p>
+              <div className="form-group">
+                <label htmlFor="create-user-role">Rôle</label>
+                <select
+                  id="create-user-role"
+                  value={newUser.role || USER_ROLES.LECTEUR}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      role: e.target.value as UserRole,
+                    })
+                  }
+                >
+                  <option value={USER_ROLES.LECTEUR}>Lecteur</option>
+                  <option value={USER_ROLES.BIBLIOTHECAIRE}>
+                    Bibliothécaire
+                  </option>
+                </select>
+              </div>
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="btn primary btn-icon"
+                  data-testid="user-create-submit"
+                >
+                  <i className="fas fa-save"></i>
+                  Créer
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary btn-icon"
+                  onClick={closeCreateModal}
+                  data-testid="user-create-cancel"
+                >
+                  <i className="fas fa-times"></i>
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

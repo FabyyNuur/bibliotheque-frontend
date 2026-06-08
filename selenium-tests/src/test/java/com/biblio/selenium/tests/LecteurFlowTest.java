@@ -3,7 +3,6 @@ package com.biblio.selenium.tests;
 import com.biblio.selenium.pages.BookListPage;
 import com.biblio.selenium.pages.MesEmpruntsPage;
 import com.biblio.selenium.pages.ProfilePage;
-import com.biblio.selenium.pages.RegisterPage;
 import com.biblio.selenium.utils.TestDataFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,7 +15,6 @@ class LecteurFlowTest extends BaseTest {
 
     @BeforeEach
     void prepareLecteurAndBook() {
-        lecteurEmail = TestDataFactory.uniqueEmail("lecteur");
         bookTitle = "Livre Selenium " + System.currentTimeMillis();
 
         loginAsBiblio();
@@ -28,11 +26,10 @@ class LecteurFlowTest extends BaseTest {
                 TestDataFactory.uniqueIsbn(),
                 "Test"
         );
+        lecteurEmail = createLecteurAsBiblio("Lecteur", "Test");
         navbarPage.logout();
 
-        RegisterPage registerPage = new RegisterPage(driver);
-        registerPage.open();
-        registerPage.register("Lecteur", "Test", lecteurEmail, TestDataFactory.defaultPassword());
+        loginAsNewLecteur(lecteurEmail);
     }
 
     @Test

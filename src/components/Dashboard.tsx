@@ -8,7 +8,6 @@ import { UserRole } from "../types/User";
 import { isLecteur, USER_ROLES } from "../constants/roles";
 import { EmpruntAvecDetails } from "../types/Emprunt";
 import { Book } from "../types/Book";
-import PasswordInput from "./PasswordInput";
 
 interface DashboardStats {
   totalUsers: number;
@@ -50,13 +49,11 @@ const Dashboard: React.FC = () => {
     nom: string;
     prenom: string;
     email: string;
-    password: string;
     role: UserRole;
   }>({
     nom: "",
     prenom: "",
     email: "",
-    password: "",
     role: USER_ROLES.LECTEUR,
   });
   const [empruntForm, setEmpruntForm] = useState({
@@ -166,7 +163,7 @@ const Dashboard: React.FC = () => {
       description: "",
       nombreExemplaires: 1,
     });
-    setUserForm({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
+    setUserForm({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
     setEmpruntForm({ utilisateurId: "", livreId: "" });
   };
 
@@ -188,10 +185,20 @@ const Dashboard: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await userService.createUser(userForm);
+      const created = await userService.createUser(userForm);
       closeModal();
       loadDashboardData();
       loadUsersAndBooks();
+
+      if (created.emailSent === false) {
+        alert(
+          `Utilisateur créé, mais l'email n'a pas pu être envoyé à ${created.email}.`
+        );
+      } else if (created.emailSent) {
+        alert(
+          `Utilisateur créé. Un email avec les identifiants a été envoyé à ${created.email}.`
+        );
+      }
     } catch {
       alert("Erreur lors de la création de l'utilisateur");
     }
@@ -530,17 +537,11 @@ const Dashboard: React.FC = () => {
                       required
                     />
                   </div>
-                  <PasswordInput
-                    id="dashboard-user-password"
-                    label="Mot de passe :"
-                    value={userForm.password}
-                    onChange={(e) =>
-                      setUserForm({ ...userForm, password: e.target.value })
-                    }
-                    required
-                    minLength={6}
-                    autoComplete="new-password"
-                  />
+                  <p className="form-hint">
+                    Un email contenant les identifiants de connexion sera envoyé
+                    à l'adresse indiquée. L'utilisateur devra changer son mot de
+                    passe à la première connexion.
+                  </p>
                   <div className="form-group">
                     <label>Rôle:</label>
                     <select

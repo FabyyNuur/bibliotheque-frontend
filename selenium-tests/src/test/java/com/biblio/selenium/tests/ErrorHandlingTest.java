@@ -1,8 +1,7 @@
 package com.biblio.selenium.tests;
 
 import com.biblio.selenium.pages.BookListPage;
-import com.biblio.selenium.pages.LoginPage;
-import com.biblio.selenium.pages.RegisterPage;
+import com.biblio.selenium.pages.ChangePasswordPage;
 import com.biblio.selenium.utils.TestDataFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -27,14 +26,15 @@ class ErrorHandlingTest extends BaseTest {
     }
 
     @Test
-    void inscriptionMotDePasseTropCourt() {
-        RegisterPage registerPage = new RegisterPage(driver);
-        registerPage.open();
-        registerPage.registerWithMismatchPassword(
-                "Court", "Test", TestDataFactory.uniqueEmail("short"),
-                "abc", "abc"
-        );
+    void changementMotDePasseTropCourtAfficheErreur() {
+        loginAsBiblio();
+        String email = createLecteurAsBiblio("Court", "Test");
+        navbarPage.logout();
 
-        Assertions.assertThat(registerPage.isDisplayed()).isTrue();
+        loginPage.open();
+        loginPage.login(email, TestDataFactory.defaultTemporaryPassword());
+
+        ChangePasswordPage changePasswordPage = new ChangePasswordPage(driver);
+        Assertions.assertThat(changePasswordPage.isDisplayed()).isTrue();
     }
 }

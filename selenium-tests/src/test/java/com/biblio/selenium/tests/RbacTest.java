@@ -1,10 +1,8 @@
 package com.biblio.selenium.tests;
 
-import com.biblio.selenium.pages.DashboardPage;
 import com.biblio.selenium.pages.EmpruntListPage;
 import com.biblio.selenium.pages.LoginPage;
 import com.biblio.selenium.pages.UserListPage;
-import com.biblio.selenium.utils.TestDataFactory;
 import com.biblio.selenium.utils.WaitUtils;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -14,10 +12,10 @@ class RbacTest extends BaseTest {
 
     @Test
     void lecteurRedirigeDepuisUsersVersDashboard() {
-        String email = TestDataFactory.uniqueEmail("rbac");
-        new com.biblio.selenium.pages.RegisterPage(driver).open();
-        new com.biblio.selenium.pages.RegisterPage(driver)
-                .register("Rbac", "User", email, TestDataFactory.defaultPassword());
+        loginAsBiblio();
+        String email = createLecteurAsBiblio("Rbac", "User");
+        navbarPage.logout();
+        loginAsNewLecteur(email);
 
         UserListPage userListPage = new UserListPage(driver);
         userListPage.open();
@@ -30,10 +28,10 @@ class RbacTest extends BaseTest {
 
     @Test
     void lecteurRedirigeDepuisEmpruntsVersDashboard() {
-        String email = TestDataFactory.uniqueEmail("rbac2");
-        new com.biblio.selenium.pages.RegisterPage(driver).open();
-        new com.biblio.selenium.pages.RegisterPage(driver)
-                .register("Rbac2", "User", email, TestDataFactory.defaultPassword());
+        loginAsBiblio();
+        String email = createLecteurAsBiblio("Rbac2", "User");
+        navbarPage.logout();
+        loginAsNewLecteur(email);
 
         EmpruntListPage empruntListPage = new EmpruntListPage(driver);
         empruntListPage.open();
