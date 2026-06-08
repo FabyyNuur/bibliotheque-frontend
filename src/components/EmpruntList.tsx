@@ -391,6 +391,7 @@ const EmpruntList: React.FC = () => {
                         <button
                           className="btn small primary"
                           onClick={() => handleReturnBook(emprunt.id)}
+                          data-testid="emprunt-return"
                         >
                           <i className="fas fa-check"></i> Retourner le livre
                         </button>

@@ -108,6 +108,21 @@ npm test         # Exécution des tests
 npm run eject    # Éjection de Create React App (irréversible)
 ```
 
+### Tests Selenium (UI navigateur)
+
+Des tests E2E Selenium WebDriver sont disponibles dans `selenium-tests/`.
+
+**Prérequis :** Java 17+, Maven 3.8+, Google Chrome, API + frontend démarrés
+
+```bash
+# API sur :3000, frontend sur :3001
+./scripts/run-selenium.sh
+# ou
+cd selenium-tests && mvn test
+```
+
+Voir [selenium-tests/README.md](selenium-tests/README.md) pour plus de détails.
+
 ## Fonctionnalités Principales
 
 ### Dashboard

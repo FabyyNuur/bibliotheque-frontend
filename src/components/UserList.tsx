@@ -519,6 +519,8 @@ const UserList: React.FC = () => {
                       className="btn small danger btn-icon-only"
                       onClick={() => handleDeleteUser(user.id)}
                       title="Supprimer"
+                      data-testid="user-delete"
+                      data-email={user.email}
                     >
                       <i className="fas fa-trash"></i>
                     </button>

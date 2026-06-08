@@ -417,6 +417,7 @@ const BookList: React.FC = () => {
                     <button
                       className="btn small danger btn-icon"
                       onClick={() => handleDeleteBook(book.id)}
+                      data-testid="book-delete"
                     >
                       <i className="fas fa-trash"></i>
                       Supprimer
