@@ -17,7 +17,7 @@ const ChangePassword: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  if (user && !user.mustChangePassword) {
+  if (user?.mustChangePassword !== true) {
     return <Navigate to="/" replace />;
   }
 

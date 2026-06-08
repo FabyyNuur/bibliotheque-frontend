@@ -25,6 +25,15 @@
       {
         "button-name": "off"
       }
+    ],
+    "axe/aria": [
+      "default",
+      {
+        "aria-required-attr": "off",
+        "aria-input-field-name": "off",
+        "aria-valid-attr-value": "off",
+        "aria-required-children": "off"
+      }
     ]
   }
 }

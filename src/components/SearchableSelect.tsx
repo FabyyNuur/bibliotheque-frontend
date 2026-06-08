@@ -64,6 +64,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   };
 
   const inputValue = open ? query : selected?.label ?? "";
+  const listboxId = `${id}-listbox`;
 
   return (
     <div
@@ -77,6 +78,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
           id={id}
           type="text"
           role="combobox"
+          aria-controls={listboxId}
           aria-expanded={open}
           aria-autocomplete="list"
           autoComplete="off"
@@ -115,27 +117,36 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         required={required}
       />
       {open && (
-        <ul className="searchable-select-list" role="listbox">
+        <ul
+          id={listboxId}
+          className="searchable-select-list"
+          role="listbox"
+        >
           {filteredOptions.length === 0 ? (
-            <li className="searchable-select-empty">Aucun résultat</li>
+            <li className="searchable-select-empty" role="presentation">
+              Aucun résultat
+            </li>
           ) : (
-            filteredOptions.map((option) => (
-              <li
-                key={option.value}
-                role="option"
-                aria-selected={option.value === value}
-                className={`searchable-select-option${
-                  option.value === value ? " selected" : ""
-                }`}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => handleSelect(option.value)}
-                data-testid={
-                  testId ? `${testId}-option-${option.value}` : undefined
-                }
-              >
-                {option.label}
-              </li>
-            ))
+            filteredOptions.map((option) => {
+              const isSelected = option.value === value;
+              return (
+                <li
+                  key={option.value}
+                  role="option"
+                  aria-selected={isSelected}
+                  className={`searchable-select-option${
+                    isSelected ? " selected" : ""
+                  }`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleSelect(option.value)}
+                  data-testid={
+                    testId ? `${testId}-option-${option.value}` : undefined
+                  }
+                >
+                  {option.label}
+                </li>
+              );
+            })
           )}
         </ul>
       )}
