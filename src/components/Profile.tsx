@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
+import { getRoleLabel } from '../constants/roles';
 
 const Profile: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -47,7 +48,7 @@ const Profile: React.FC = () => {
       <div className="profile-info">
         <p>
           <strong>Rôle :</strong>{' '}
-          {user.role === 'BIBLIOTHECAIRE' ? 'Bibliothécaire' : 'Lecteur'}
+          {getRoleLabel(user.role)}
         </p>
         <p>
           <strong>Membre depuis :</strong>{' '}

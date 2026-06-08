@@ -72,10 +72,6 @@ const Login: React.FC = () => {
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
-
-        <p className="auth-footer">
-          Pas encore de compte ? <Link to="/register">Créer un compte</Link>
-        </p>
       </div>
     </div>
   );

@@ -1020,11 +1020,14 @@ body {
 }
 
 .empty-state::before {
-  content: "📚";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  content: "\f518";
   display: block;
-  font-size: 4rem;
+  font-size: 3rem;
   margin-bottom: 1rem;
-  opacity: 0.6;
+  color: #f7901c;
+  opacity: 0.75;
 }
 
 /* Time indicators */

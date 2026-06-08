@@ -4,6 +4,7 @@ import { userService } from "../services/userService";
 import { bookService } from "../services/bookService";
 import { EmpruntAvecDetails, CreateEmpruntRequest } from "../types/Emprunt";
 import { User } from "../types/User";
+import { isLecteur } from "../constants/roles";
 import { Book } from "../types/Book";
 
 const EmpruntList: React.FC = () => {
@@ -152,10 +153,11 @@ const EmpruntList: React.FC = () => {
             Historiques
           </button>
           <button
-            className="btn primary"
+            className="btn primary btn-icon"
             onClick={() => setShowCreateForm(!showCreateForm)}
           >
-            {showCreateForm ? "Annuler" : "➕ Nouvel emprunt"}
+            <i className="fas fa-plus"></i>
+            {showCreateForm ? "Annuler" : "Nouvel emprunt"}
           </button>
         </div>
       </div>
@@ -216,9 +218,9 @@ const EmpruntList: React.FC = () => {
               }
               required
             >
-              <option value="">Sélectionner un utilisateur</option>
+              <option value="">Sélectionner un lecteur</option>
               {users
-                .filter((user) => user.actif)
+                .filter((user) => user.actif && isLecteur(user.role))
                 .map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.nom} {user.prenom} ({user.email})

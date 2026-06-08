@@ -9,6 +9,7 @@ import { authService } from '../services/authService';
 import { userService } from '../services/userService';
 import { setStoredToken, getStoredToken } from '../services/apiClient';
 import { CreateUserRequest, User } from '../types/User';
+import { isBibliothecaire } from '../constants/roles';
 
 interface AuthContextType {
   user: User | null;
@@ -86,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         user,
         isLoading,
         isAuthenticated: !!user,
-        isBibliothecaire: user?.role === 'BIBLIOTHECAIRE',
+        isBibliothecaire: user ? isBibliothecaire(user.role) : false,
         login,
         register,
         logout,

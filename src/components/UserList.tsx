@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { userService } from "../services/userService";
 import { empruntService } from "../services/empruntService";
 import { User, CreateUserRequest, UserRole } from "../types/User";
+import { getRoleLabel, USER_ROLES } from "../constants/roles";
 import PasswordInput from "./PasswordInput";
 import { useAuth } from "../context/AuthContext";
 
@@ -22,8 +23,23 @@ const UserList: React.FC = () => {
     prenom: "",
     email: "",
     password: "",
-    role: "LECTEUR",
+    role: USER_ROLES.LECTEUR,
   });
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+
+    const query = searchQuery.toLowerCase();
+    return users.filter(
+      (user) =>
+        user.nom.toLowerCase().includes(query) ||
+        user.prenom.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        getRoleLabel(user.role).toLowerCase().includes(query) ||
+        (user.actif ? "actif" : "inactif").includes(query)
+    );
+  }, [users, searchQuery]);
 
   // Fonction utilitaire pour formater les dates
   const formatDate = (dateString: string | Date | null | undefined): string => {
@@ -215,7 +231,7 @@ const UserList: React.FC = () => {
     e.preventDefault();
     try {
       await userService.createUser(newUser);
-      setNewUser({ nom: "", prenom: "", email: "", password: "", role: "LECTEUR" });
+      setNewUser({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
       setShowCreateForm(false);
       loadUsers();
     } catch (err) {
@@ -247,7 +263,7 @@ const UserList: React.FC = () => {
         email: newUser.email,
         role: newUser.role,
       });
-      setNewUser({ nom: "", prenom: "", email: "", password: "", role: "LECTEUR" });
+      setNewUser({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
       setShowEditForm(false);
       setEditingUser(null);
       loadUsers();
@@ -259,7 +275,7 @@ const UserList: React.FC = () => {
   const cancelEdit = () => {
     setShowEditForm(false);
     setEditingUser(null);
-    setNewUser({ nom: "", prenom: "", email: "", password: "", role: "LECTEUR" });
+    setNewUser({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
   };
 
   const isCurrentUser = (userId: string) => currentUser?.id === userId;
@@ -337,6 +353,16 @@ const UserList: React.FC = () => {
 
       {error && <div className="error">{error}</div>}
 
+      <div className="filters">
+        <input
+          type="text"
+          placeholder="Rechercher par nom, prénom, email ou rôle..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
+      </div>
+
       {(showCreateForm || showEditForm) && (
         <form
           className="create-form"
@@ -386,7 +412,7 @@ const UserList: React.FC = () => {
               />
             )}
             <select
-              value={newUser.role || "LECTEUR"}
+              value={newUser.role || USER_ROLES.LECTEUR}
               onChange={(e) =>
                 setNewUser({
                   ...newUser,
@@ -394,8 +420,8 @@ const UserList: React.FC = () => {
                 })
               }
             >
-              <option value="LECTEUR">Lecteur</option>
-              <option value="BIBLIOTHECAIRE">Bibliothécaire</option>
+              <option value={USER_ROLES.LECTEUR}>Lecteur</option>
+              <option value={USER_ROLES.BIBLIOTHECAIRE}>Bibliothécaire</option>
             </select>
           </div>
           <div className="form-actions">
@@ -431,7 +457,7 @@ const UserList: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {filteredUsers.map((user) => (
               <tr key={user.id}>
                 <td>{user.nom}</td>
                 <td>{user.prenom}</td>
@@ -439,7 +465,7 @@ const UserList: React.FC = () => {
                 <td>{formatDate(user.dateInscription)}</td>
                 <td>
                   <span className="role-badge">
-                    {user.role === "BIBLIOTHECAIRE" ? "Bibliothécaire" : "Lecteur"}
+                    {getRoleLabel(user.role)}
                   </span>
                 </td>
                 <td>
@@ -504,9 +530,13 @@ const UserList: React.FC = () => {
         </table>
       </div>
 
-      {users.length === 0 && (
+      {filteredUsers.length === 0 && (
         <div className="empty-state">
-          <p>Aucun utilisateur trouvé</p>
+          <p>
+            {searchQuery
+              ? "Aucun utilisateur ne correspond à votre recherche"
+              : "Aucun utilisateur trouvé"}
+          </p>
         </div>
       )}
 
@@ -530,9 +560,7 @@ const UserList: React.FC = () => {
                 </p>
                 <p>
                   <strong>Rôle:</strong>{" "}
-                  {selectedUser.role === "BIBLIOTHECAIRE"
-                    ? "Bibliothécaire"
-                    : "Lecteur"}
+                  {getRoleLabel(selectedUser.role)}
                 </p>
                 <p>
                   <strong>Statut:</strong>

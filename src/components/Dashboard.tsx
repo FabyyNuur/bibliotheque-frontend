@@ -5,6 +5,7 @@ import { bookService } from "../services/bookService";
 import { empruntService } from "../services/empruntService";
 import { useAuth } from "../context/AuthContext";
 import { UserRole } from "../types/User";
+import { isLecteur, USER_ROLES } from "../constants/roles";
 import { EmpruntAvecDetails } from "../types/Emprunt";
 import { Book } from "../types/Book";
 import PasswordInput from "./PasswordInput";
@@ -45,12 +46,18 @@ const Dashboard: React.FC = () => {
     description: "",
     nombreExemplaires: 1,
   });
-  const [userForm, setUserForm] = useState({
+  const [userForm, setUserForm] = useState<{
+    nom: string;
+    prenom: string;
+    email: string;
+    password: string;
+    role: UserRole;
+  }>({
     nom: "",
     prenom: "",
     email: "",
     password: "",
-    role: "LECTEUR" as UserRole,
+    role: USER_ROLES.LECTEUR,
   });
   const [empruntForm, setEmpruntForm] = useState({
     utilisateurId: "",
@@ -159,7 +166,7 @@ const Dashboard: React.FC = () => {
       description: "",
       nombreExemplaires: 1,
     });
-    setUserForm({ nom: "", prenom: "", email: "", password: "", role: "LECTEUR" });
+    setUserForm({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
     setEmpruntForm({ utilisateurId: "", livreId: "" });
   };
 
@@ -545,8 +552,8 @@ const Dashboard: React.FC = () => {
                         })
                       }
                     >
-                      <option value="LECTEUR">Lecteur</option>
-                      <option value="BIBLIOTHECAIRE">Bibliothécaire</option>
+                      <option value={USER_ROLES.LECTEUR}>Lecteur</option>
+                      <option value={USER_ROLES.BIBLIOTHECAIRE}>Bibliothécaire</option>
                     </select>
                   </div>
                   <div className="form-actions">
@@ -583,9 +590,9 @@ const Dashboard: React.FC = () => {
                       }
                       required
                     >
-                      <option value="">Sélectionner un utilisateur</option>
+                      <option value="">Sélectionner un lecteur</option>
                       {users
-                        .filter((u) => u.actif)
+                        .filter((u) => u.actif && isLecteur(u.role))
                         .map((u) => (
                           <option key={u.id} value={u.id}>
                             {u.nom} {u.prenom} ({u.email})
