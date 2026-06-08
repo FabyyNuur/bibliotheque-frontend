@@ -26,6 +26,7 @@ const UserList: React.FC = () => {
     role: USER_ROLES.LECTEUR,
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return users;
@@ -40,6 +41,19 @@ const UserList: React.FC = () => {
         (user.actif ? "actif" : "inactif").includes(query)
     );
   }, [users, searchQuery]);
+
+  const deletableFilteredUsers = useMemo(
+    () => filteredUsers.filter((user) => user.id !== currentUser?.id),
+    [filteredUsers, currentUser?.id]
+  );
+
+  useEffect(() => {
+    setSelectedUserIds((prev) =>
+      prev.filter((id) =>
+        deletableFilteredUsers.some((user) => user.id === id)
+      )
+    );
+  }, [deletableFilteredUsers]);
 
   // Fonction utilitaire pour formater les dates
   const formatDate = (dateString: string | Date | null | undefined): string => {
@@ -291,6 +305,7 @@ const UserList: React.FC = () => {
     ) {
       try {
         await userService.deleteUser(id);
+        setSelectedUserIds((prev) => prev.filter((userId) => userId !== id));
         loadUsers();
       } catch (err: unknown) {
         const message =
@@ -298,6 +313,61 @@ const UserList: React.FC = () => {
             ?.error || "Erreur lors de la suppression de l'utilisateur";
         setError(message);
       }
+    }
+  };
+
+  const toggleUserSelection = (id: string) => {
+    if (isCurrentUser(id)) return;
+
+    setSelectedUserIds((prev) =>
+      prev.includes(id) ? prev.filter((userId) => userId !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllUsers = () => {
+    const visibleIds = deletableFilteredUsers.map((user) => user.id);
+    const allSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedUserIds.includes(id));
+
+    setSelectedUserIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !visibleIds.includes(id))
+        : Array.from(new Set([...prev, ...visibleIds]))
+    );
+  };
+
+  const handleBulkDeleteUsers = async () => {
+    const idsToDelete = selectedUserIds.filter((id) => !isCurrentUser(id));
+    if (idsToDelete.length === 0) return;
+
+    const count = idsToDelete.length;
+    if (
+      !window.confirm(
+        `Êtes-vous sûr de vouloir supprimer ${count} utilisateur${count > 1 ? "s" : ""} ?`
+      )
+    ) {
+      return;
+    }
+
+    setError(null);
+
+    const results = await Promise.allSettled(
+      idsToDelete.map((id) => userService.deleteUser(id))
+    );
+
+    const failed = results.filter((result) => result.status === "rejected").length;
+    const succeeded = count - failed;
+
+    setSelectedUserIds([]);
+    loadUsers();
+
+    if (failed > 0) {
+      setError(
+        succeeded === 0
+          ? "Erreur lors de la suppression des utilisateurs sélectionnés."
+          : `${succeeded} utilisateur${succeeded > 1 ? "s" : ""} supprimé${succeeded > 1 ? "s" : ""}, ${failed} échec${failed > 1 ? "s" : ""}.`
+      );
     }
   };
 
@@ -325,6 +395,16 @@ const UserList: React.FC = () => {
       <div className="header">
         <h2>Gestion des Utilisateurs</h2>
         <div className="header-buttons">
+          {selectedUserIds.length > 0 && (
+            <button
+              className="btn danger btn-icon"
+              onClick={handleBulkDeleteUsers}
+              data-testid="user-bulk-delete"
+            >
+              <i className="fas fa-trash"></i>
+              Supprimer ({selectedUserIds.length})
+            </button>
+          )}
           {showEditForm && (
             <button className="btn secondary btn-icon" onClick={cancelEdit}>
               <i className="fas fa-times"></i>
@@ -447,6 +527,22 @@ const UserList: React.FC = () => {
         <table className="users-table">
           <thead className="table-header-white">
             <tr>
+              <th className="select-column">
+                {deletableFilteredUsers.length > 0 && (
+                  <input
+                    type="checkbox"
+                    checked={
+                      deletableFilteredUsers.length > 0 &&
+                      deletableFilteredUsers.every((user) =>
+                        selectedUserIds.includes(user.id)
+                      )
+                    }
+                    onChange={toggleSelectAllUsers}
+                    title="Tout sélectionner"
+                    data-testid="user-select-all"
+                  />
+                )}
+              </th>
               <th>Nom</th>
               <th>Prénom</th>
               <th>Email</th>
@@ -458,7 +554,20 @@ const UserList: React.FC = () => {
           </thead>
           <tbody>
             {filteredUsers.map((user) => (
-              <tr key={user.id}>
+              <tr
+                key={user.id}
+                className={selectedUserIds.includes(user.id) ? "selected" : ""}
+              >
+                <td className="select-column">
+                  {!isCurrentUser(user.id) ? (
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIds.includes(user.id)}
+                      onChange={() => toggleUserSelection(user.id)}
+                      data-testid="user-select"
+                    />
+                  ) : null}
+                </td>
                 <td>{user.nom}</td>
                 <td>{user.prenom}</td>
                 <td>{user.email}</td>

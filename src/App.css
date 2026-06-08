@@ -1003,6 +1003,43 @@ body {
   color: #5d4e37;
 }
 
+.bulk-select-checkbox {
+  margin-left: auto;
+}
+
+.row-select-checkbox {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.book-card.selected {
+  border-color: #68350e;
+  box-shadow: 0 0 0 2px rgba(104, 53, 14, 0.15);
+}
+
+.book-card:has(.row-select-checkbox) .book-header {
+  padding-left: 2.5rem;
+}
+
+.users-table tr.selected {
+  background-color: rgba(104, 53, 14, 0.08);
+}
+
+.select-column {
+  width: 2.5rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.select-column input[type="checkbox"] {
+  cursor: pointer;
+  width: 1rem;
+  height: 1rem;
+}
+
 .filter-buttons {
   display: flex;
   gap: 0.5rem;

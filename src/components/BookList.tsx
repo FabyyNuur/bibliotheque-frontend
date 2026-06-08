@@ -26,10 +26,17 @@ const BookList: React.FC = () => {
     nombreExemplaires: 1,
   });
   const [borrowingId, setBorrowingId] = useState<string | null>(null);
+  const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadBooks();
   }, []);
+
+  useEffect(() => {
+    setSelectedBookIds((prev) =>
+      prev.filter((id) => books.some((book) => book.id === id))
+    );
+  }, [books]);
 
   useEffect(() => {
     let filtered = books;
@@ -49,6 +56,9 @@ const BookList: React.FC = () => {
     }
 
     setFilteredBooks(filtered);
+    setSelectedBookIds((prev) =>
+      prev.filter((id) => filtered.some((book) => book.id === id))
+    );
   }, [books, searchQuery, filterAvailable]);
 
   const loadBooks = async () => {
@@ -147,10 +157,66 @@ const BookList: React.FC = () => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce livre ?")) {
       try {
         await bookService.deleteBook(id);
+        setSelectedBookIds((prev) => prev.filter((bookId) => bookId !== id));
         loadBooks();
       } catch {
         setError("Erreur lors de la suppression du livre");
       }
+    }
+  };
+
+  const toggleBookSelection = (id: string) => {
+    setSelectedBookIds((prev) =>
+      prev.includes(id) ? prev.filter((bookId) => bookId !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllBooks = () => {
+    const visibleIds = filteredBooks.map((book) => book.id);
+    const allSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedBookIds.includes(id));
+
+    setSelectedBookIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !visibleIds.includes(id))
+        : Array.from(new Set([...prev, ...visibleIds]))
+    );
+  };
+
+  const handleBulkDeleteBooks = async () => {
+    if (selectedBookIds.length === 0) return;
+
+    const count = selectedBookIds.length;
+    if (
+      !window.confirm(
+        `Êtes-vous sûr de vouloir supprimer ${count} livre${count > 1 ? "s" : ""} ?`
+      )
+    ) {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+
+    const results = await Promise.allSettled(
+      selectedBookIds.map((id) => bookService.deleteBook(id))
+    );
+
+    const failed = results.filter((result) => result.status === "rejected").length;
+    const succeeded = count - failed;
+
+    setSelectedBookIds([]);
+    loadBooks();
+
+    if (failed === 0) {
+      setSuccess(`${succeeded} livre${succeeded > 1 ? "s" : ""} supprimé${succeeded > 1 ? "s" : ""}.`);
+    } else if (succeeded === 0) {
+      setError("Erreur lors de la suppression des livres sélectionnés.");
+    } else {
+      setError(
+        `${succeeded} livre${succeeded > 1 ? "s" : ""} supprimé${succeeded > 1 ? "s" : ""}, ${failed} échec${failed > 1 ? "s" : ""}.`
+      );
     }
   };
 
@@ -181,6 +247,16 @@ const BookList: React.FC = () => {
         <h2>{isBibliothecaire ? "Gestion des Livres" : "Catalogue des Livres"}</h2>
         {isBibliothecaire && (
           <div className="header-buttons">
+            {selectedBookIds.length > 0 && (
+              <button
+                className="btn danger btn-icon"
+                onClick={handleBulkDeleteBooks}
+                data-testid="book-bulk-delete"
+              >
+                <i className="fas fa-trash"></i>
+                Supprimer ({selectedBookIds.length})
+              </button>
+            )}
             {showEditForm && (
               <button className="btn secondary btn-icon" onClick={cancelEdit}>
                 <i className="fas fa-times"></i>
@@ -223,6 +299,20 @@ const BookList: React.FC = () => {
           />
           Afficher uniquement les livres disponibles
         </label>
+        {isBibliothecaire && filteredBooks.length > 0 && (
+          <label className="filter-checkbox bulk-select-checkbox">
+            <input
+              type="checkbox"
+              checked={
+                filteredBooks.length > 0 &&
+                filteredBooks.every((book) => selectedBookIds.includes(book.id))
+              }
+              onChange={toggleSelectAllBooks}
+              data-testid="book-select-all"
+            />
+            Tout sélectionner ({filteredBooks.length})
+          </label>
+        )}
       </div>
 
       {isBibliothecaire && (showCreateForm || showEditForm) && (
@@ -328,9 +418,21 @@ const BookList: React.FC = () => {
           return (
             <div
               key={book.id}
-              className={`book-card ${!isAvailable ? "unavailable" : ""}`}
+              className={`book-card ${!isAvailable ? "unavailable" : ""} ${
+                selectedBookIds.includes(book.id) ? "selected" : ""
+              }`}
             >
               <div className="book-header">
+                {isBibliothecaire && (
+                  <label className="row-select-checkbox" title="Sélectionner">
+                    <input
+                      type="checkbox"
+                      checked={selectedBookIds.includes(book.id)}
+                      onChange={() => toggleBookSelection(book.id)}
+                      data-testid="book-select"
+                    />
+                  </label>
+                )}
                 <h3>{book.titre}</h3>
                 <span className="status">
                   <div
