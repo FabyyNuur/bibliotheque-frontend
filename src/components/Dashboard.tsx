@@ -5,9 +5,10 @@ import { bookService } from "../services/bookService";
 import { empruntService } from "../services/empruntService";
 import { useAuth } from "../context/AuthContext";
 import { UserRole } from "../types/User";
-import { isLecteur, USER_ROLES } from "../constants/roles";
+import { USER_ROLES } from "../constants/roles";
 import { EmpruntAvecDetails } from "../types/Emprunt";
 import { Book } from "../types/Book";
+import EmpruntCreateForm, { EmpruntFormState } from "./EmpruntCreateForm";
 
 interface DashboardStats {
   totalUsers: number;
@@ -56,9 +57,10 @@ const Dashboard: React.FC = () => {
     email: "",
     role: USER_ROLES.LECTEUR,
   });
-  const [empruntForm, setEmpruntForm] = useState({
+  const [empruntForm, setEmpruntForm] = useState<EmpruntFormState>({
     utilisateurId: "",
     livreId: "",
+    dureeEmprunt: 14,
   });
   const [users, setUsers] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
@@ -164,7 +166,7 @@ const Dashboard: React.FC = () => {
       nombreExemplaires: 1,
     });
     setUserForm({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
-    setEmpruntForm({ utilisateurId: "", livreId: "" });
+    setEmpruntForm({ utilisateurId: "", livreId: "", dureeEmprunt: 14 });
   };
 
   const handleCreateBook = async (e: React.FormEvent) => {
@@ -210,6 +212,7 @@ const Dashboard: React.FC = () => {
       await empruntService.createEmprunt({
         utilisateurId: empruntForm.utilisateurId,
         livreId: empruntForm.livreId,
+        dureeEmprunt: empruntForm.dureeEmprunt,
       });
       closeModal();
       loadDashboardData();
@@ -578,62 +581,16 @@ const Dashboard: React.FC = () => {
                 <h3>
                   <i className="fas fa-clipboard-list"></i> Créer un emprunt
                 </h3>
-                <form onSubmit={handleCreateEmprunt}>
-                  <div className="form-group">
-                    <label>Utilisateur:</label>
-                    <select
-                      value={empruntForm.utilisateurId}
-                      onChange={(e) =>
-                        setEmpruntForm({
-                          ...empruntForm,
-                          utilisateurId: e.target.value,
-                        })
-                      }
-                      required
-                    >
-                      <option value="">Sélectionner un lecteur</option>
-                      {users
-                        .filter((u) => u.actif && isLecteur(u.role))
-                        .map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.nom} {u.prenom} ({u.email})
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Livre:</label>
-                    <select
-                      value={empruntForm.livreId}
-                      onChange={(e) =>
-                        setEmpruntForm({
-                          ...empruntForm,
-                          livreId: e.target.value,
-                        })
-                      }
-                      required
-                    >
-                      <option value="">Sélectionner un livre</option>
-                      {books.map((book) => (
-                        <option key={book.id} value={book.id}>
-                          {book.titre} - {book.auteur}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-actions">
-                    <button type="submit" className="btn-primary btn-icon">
-                      <i className="fas fa-save"></i> Créer
-                    </button>
-                    <button
-                      type="button"
-                      onClick={closeModal}
-                      className="btn-secondary btn-icon"
-                    >
-                      <i className="fas fa-times"></i> Annuler
-                    </button>
-                  </div>
-                </form>
+                <EmpruntCreateForm
+                  form={empruntForm}
+                  users={users}
+                  books={books}
+                  onChange={(update) =>
+                    setEmpruntForm((prev) => ({ ...prev, ...update }))
+                  }
+                  onSubmit={handleCreateEmprunt}
+                  onCancel={closeModal}
+                />
               </div>
             )}
           </div>

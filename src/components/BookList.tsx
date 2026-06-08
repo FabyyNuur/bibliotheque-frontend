@@ -449,16 +449,6 @@ const BookList: React.FC = () => {
                     <p className="book-card-author">{book.auteur}</p>
                   </div>
                   <div className="book-header-aside">
-                    <button
-                      type="button"
-                      className="book-detail-eye-btn"
-                      onClick={() => openBookDetail(book)}
-                      title="Voir les détails"
-                      aria-label={`Voir les détails de ${book.titre}`}
-                      data-testid="book-detail-btn"
-                    >
-                      <i className="fas fa-eye"></i>
-                    </button>
                     <div className="book-card-badges">
                       <span
                         className={`book-badge ${
@@ -510,6 +500,16 @@ const BookList: React.FC = () => {
                     </button>
                   </>
                 )}
+                <button
+                  type="button"
+                  className="book-detail-eye-btn"
+                  onClick={() => openBookDetail(book)}
+                  title="Voir les détails"
+                  aria-label={`Voir les détails de ${book.titre}`}
+                  data-testid="book-detail-btn"
+                >
+                  <i className="fas fa-eye"></i>
+                </button>
                 {isAuthenticated && !isBibliothecaire && isAvailable && (
                   <button
                     className="btn small primary btn-icon"

@@ -3,12 +3,16 @@ package com.biblio.selenium.pages;
 import com.biblio.selenium.utils.WaitUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 
 public class EmpruntListPage extends BasePage {
 
     private static final By PAGE_TITLE = By.xpath("//h2[contains(text(),'Emprunts')]");
-    private static final By NEW_EMPRUNT_BUTTON = By.xpath("//button[contains(.,'Nouvel emprunt')]");
+    private static final By NEW_EMPRUNT_BUTTON = By.cssSelector("[data-testid='emprunt-create-open']");
+    private static final By CREATE_MODAL = By.cssSelector("[data-testid='emprunt-create-modal']");
+    private static final By USER_SEARCH = By.cssSelector("[data-testid='emprunt-user-select-search']");
+    private static final By BOOK_SEARCH = By.cssSelector("[data-testid='emprunt-book-select-search']");
+    private static final By SUBMIT_BUTTON = By.cssSelector("[data-testid='emprunt-create-submit']");
     private static final By EMPRUNTS_TABLE = By.cssSelector(".emprunts-table");
 
     public EmpruntListPage(WebDriver driver) {
@@ -34,35 +38,23 @@ public class EmpruntListPage extends BasePage {
 
     public void clickNewEmprunt() {
         click(NEW_EMPRUNT_BUTTON);
-        WaitUtils.waitForVisible(driver, By.cssSelector(".create-form"));
+        WaitUtils.waitForVisible(driver, CREATE_MODAL);
     }
 
     public void createEmpruntForUser(String userEmail, String bookTitle) {
         clickNewEmprunt();
-        new Select(driver.findElement(By.xpath("//form[contains(@class,'create-form')]//select[1]")))
-                .selectByVisibleText(findOptionContaining(userEmail));
-        new Select(driver.findElement(By.xpath("//form[contains(@class,'create-form')]//select[2]")))
-                .selectByVisibleText(findBookOptionContaining(bookTitle));
-        click(By.xpath("//form[contains(@class,'create-form')]//button[contains(.,\"Créer l'emprunt\")]"));
+        selectSearchableOption(USER_SEARCH, userEmail);
+        selectSearchableOption(BOOK_SEARCH, bookTitle);
+        click(SUBMIT_BUTTON);
+        WaitUtils.createWait(driver).until(
+                ExpectedConditions.invisibilityOfElementLocated(CREATE_MODAL));
         WaitUtils.waitForPageLoad(driver);
     }
 
-    private String findOptionContaining(String email) {
-        return driver.findElements(By.xpath("//form[contains(@class,'create-form')]//select[1]/option"))
-                .stream()
-                .map(option -> option.getText())
-                .filter(text -> text.contains(email))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Lecteur introuvable : " + email));
-    }
-
-    private String findBookOptionContaining(String bookTitle) {
-        return driver.findElements(By.xpath("//form[contains(@class,'create-form')]//select[2]/option"))
-                .stream()
-                .map(option -> option.getText())
-                .filter(text -> text.contains(bookTitle))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Livre introuvable : " + bookTitle));
+    private void selectSearchableOption(By searchInput, String query) {
+        type(searchInput, query);
+        click(By.xpath(
+                "//li[contains(@class,'searchable-select-option') and contains(.,'" + query + "')]"));
     }
 
     public void returnFirstActiveLoan() {
