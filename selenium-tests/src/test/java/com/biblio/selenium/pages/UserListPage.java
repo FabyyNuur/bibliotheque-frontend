@@ -51,7 +51,12 @@ public class UserListPage extends BasePage {
         WaitUtils.waitForPageLoad(driver);
     }
 
+    public void waitForUserInTable(String email) {
+        WaitUtils.waitForText(driver, USERS_TABLE, email);
+    }
+
     public boolean userExistsInTable(String email) {
+        waitForUserInTable(email);
         return driver.findElement(USERS_TABLE).getText().contains(email);
     }
 

@@ -34,6 +34,16 @@ mvn test -Dheadless=false
 - Email : `admin@biblio.com`
 - Mot de passe : `secret123`
 
+## Nettoyage des données
+
+Après chaque test (et une fois au démarrage de la suite), les données créées par Selenium sont supprimées via l'API :
+
+- utilisateurs dont l'email se termine par `@selenium.test`
+- livres dont le titre commence par `Livre Selenium` ou `Biblio Book`, ou l'ISBN par `978-sel-`
+- emprunts actifs liés à ces utilisateurs ou livres (retour automatique avant suppression)
+
+Le compte bibliothécaire de test et les données manuelles ne sont pas touchés.
+
 ## Structure
 
 ```

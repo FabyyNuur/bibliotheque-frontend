@@ -3,6 +3,7 @@ package com.biblio.selenium.pages;
 import com.biblio.selenium.utils.WaitUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 
 public class LoginPage extends BasePage {
 
@@ -24,6 +25,12 @@ public class LoginPage extends BasePage {
         type(EMAIL_INPUT, email);
         type(PASSWORD_INPUT, password);
         click(SUBMIT_BUTTON);
+        WaitUtils.waitForPageLoad(driver);
+    }
+
+    public void loginExpectingPasswordChange(String email, String password) {
+        login(email, password);
+        WaitUtils.createWait(driver).until(ExpectedConditions.urlContains("/change-password"));
         WaitUtils.waitForPageLoad(driver);
     }
 

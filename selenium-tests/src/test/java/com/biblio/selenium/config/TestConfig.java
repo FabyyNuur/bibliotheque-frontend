@@ -26,6 +26,10 @@ public final class TestConfig {
         return getProperty("base.url", "http://localhost:3001");
     }
 
+    public static String getApiUrl() {
+        return getProperty("api.url", "http://localhost:3000/api");
+    }
+
     public static String getBiblioEmail() {
         return getProperty("biblio.email", "admin@biblio.com");
     }

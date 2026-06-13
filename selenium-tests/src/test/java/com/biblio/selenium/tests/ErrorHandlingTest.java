@@ -32,9 +32,17 @@ class ErrorHandlingTest extends BaseTest {
         navbarPage.logout();
 
         loginPage.open();
-        loginPage.login(email, TestDataFactory.defaultTemporaryPassword());
+        loginPage.loginExpectingPasswordChange(email, TestDataFactory.defaultTemporaryPassword());
 
         ChangePasswordPage changePasswordPage = new ChangePasswordPage(driver);
-        Assertions.assertThat(changePasswordPage.isDisplayed()).isTrue();
+        changePasswordPage.waitUntilDisplayed();
+        changePasswordPage.submitNewPassword(
+                TestDataFactory.defaultTemporaryPassword(),
+                "abc"
+        );
+
+        Assertions.assertThat(changePasswordPage.hasError()).isTrue();
+        Assertions.assertThat(changePasswordPage.getErrorMessage())
+                .contains("6 caractères");
     }
 }

@@ -53,6 +53,7 @@ class AuthTest extends BaseTest {
         loginAsNewLecteur(email);
 
         DashboardPage dashboardPage = new DashboardPage(driver);
+        dashboardPage.waitUntilDisplayed();
         Assertions.assertThat(dashboardPage.isDisplayed()).isTrue();
         Assertions.assertThat(navbarPage.isLogoutVisible()).isTrue();
     }

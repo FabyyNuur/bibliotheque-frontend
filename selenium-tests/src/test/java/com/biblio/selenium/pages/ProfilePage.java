@@ -18,6 +18,12 @@ public class ProfilePage extends BasePage {
 
     public void open() {
         navigateTo("/profil");
+        waitUntilDisplayed();
+    }
+
+    public void waitUntilDisplayed() {
+        WaitUtils.waitForVisible(driver, PAGE_TITLE);
+        WaitUtils.waitForVisible(driver, NOM_INPUT);
     }
 
     public boolean isDisplayed() {

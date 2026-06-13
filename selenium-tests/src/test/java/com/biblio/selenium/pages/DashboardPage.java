@@ -1,5 +1,6 @@
 package com.biblio.selenium.pages;
 
+import com.biblio.selenium.utils.WaitUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 
@@ -14,6 +15,11 @@ public class DashboardPage extends BasePage {
 
     public void open() {
         navigateTo("/");
+        waitUntilDisplayed();
+    }
+
+    public void waitUntilDisplayed() {
+        WaitUtils.waitForVisible(driver, PAGE_TITLE);
     }
 
     public boolean isDisplayed() {
