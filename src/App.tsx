@@ -1,5 +1,11 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  Navigate,
+} from "react-router-dom";
 import "./App.css";
 import { useAuth } from "./context/AuthContext";
 import UserList from "./components/UserList";
@@ -16,12 +22,24 @@ function AppContent() {
   const { isAuthenticated, isBibliothecaire, logout, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="loading app-loading">Chargement...</div>;
+    return (
+      <div
+        className="loading app-loading"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        Chargement...
+      </div>
+    );
   }
 
   return (
     <div className="App">
-      <nav className="navbar">
+      <a className="skip-link" href="#main-content">
+        Aller au contenu principal
+      </a>
+      <nav className="navbar" aria-label="Navigation principale">
         <div className="nav-container">
           <h1 className="nav-title">Nuur Library Management</h1>
           <ul className="nav-menu">
@@ -65,8 +83,11 @@ function AppContent() {
                   </>
                 )}
                 <li className="nav-user">
-                  <button className="btn small secondary btn-icon" onClick={logout}>
-                    <i className="fas fa-sign-out-alt"></i>
+                  <button
+                    className="btn small secondary btn-icon"
+                    type="button"
+                    onClick={logout}
+                  >
                     Déconnexion
                   </button>
                 </li>
@@ -89,7 +110,7 @@ function AppContent() {
         </div>
       </nav>
 
-      <main className="main-content">
+      <main className="main-content" id="main-content" tabIndex={-1}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Navigate to="/login" replace />} />

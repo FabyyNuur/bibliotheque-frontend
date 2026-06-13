@@ -6,9 +6,27 @@
 }
 
 /* Amélioration de l'accessibilité et du touch */
-:focus {
+:focus-visible {
   outline: 2px solid #f7901c;
   outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 2000;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: #1f3610;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.skip-link:focus-visible {
+  top: 1rem;
 }
 
 /* Amélioration du scroll sur mobile */
