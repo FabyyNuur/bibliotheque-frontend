@@ -78,7 +78,7 @@ const Dashboard: React.FC = () => {
       const sortedBooks = allBooksData
         .sort(
           (a, b) =>
-            new Date(b.dateAjout).getTime() - new Date(a.dateAjout).getTime()
+            new Date(b.dateAjout).getTime() - new Date(a.dateAjout).getTime(),
         )
         .slice(0, 5);
       setRecentBooks(sortedBooks);
@@ -92,14 +92,19 @@ const Dashboard: React.FC = () => {
       setLoading(true);
 
       if (isBibliothecaire) {
-        const [usersData, allBooks, availableBooks, currentLoans, overdueLoans] =
-          await Promise.all([
-            userService.getAllUsers(),
-            bookService.getAllBooks(),
-            bookService.getAvailableBooks(),
-            empruntService.getAllEmpruntsEnCours(),
-            empruntService.getEmpruntsEnRetard(),
-          ]);
+        const [
+          usersData,
+          allBooks,
+          availableBooks,
+          currentLoans,
+          overdueLoans,
+        ] = await Promise.all([
+          userService.getAllUsers(),
+          bookService.getAllBooks(),
+          bookService.getAvailableBooks(),
+          empruntService.getAllEmpruntsEnCours(),
+          empruntService.getEmpruntsEnRetard(),
+        ]);
 
         setStats({
           totalUsers: usersData.length,
@@ -117,7 +122,7 @@ const Dashboard: React.FC = () => {
 
         setMyEmprunts(emprunts);
         const enCours = emprunts.filter(
-          (e) => e.statut === "EN_COURS" || e.statut === "EN_RETARD"
+          (e) => e.statut === "EN_COURS" || e.statut === "EN_RETARD",
         );
 
         setStats({
@@ -131,7 +136,7 @@ const Dashboard: React.FC = () => {
         const sortedBooks = allBooks
           .sort(
             (a, b) =>
-              new Date(b.dateAjout).getTime() - new Date(a.dateAjout).getTime()
+              new Date(b.dateAjout).getTime() - new Date(a.dateAjout).getTime(),
           )
           .slice(0, 5);
         setRecentBooks(sortedBooks);
@@ -194,11 +199,11 @@ const Dashboard: React.FC = () => {
 
       if (created.emailSent === false) {
         alert(
-          `Utilisateur créé, mais l'email n'a pas pu être envoyé à ${created.email}.`
+          `Utilisateur créé. Email non envoyé à ${created.email} (adresse fictive ou SMTP indisponible).`,
         );
       } else if (created.emailSent) {
         alert(
-          `Utilisateur créé. Un email avec les identifiants a été envoyé à ${created.email}.`
+          `Utilisateur créé. Un email avec les identifiants a été envoyé à ${created.email}.`,
         );
       }
     } catch {
@@ -223,7 +228,7 @@ const Dashboard: React.FC = () => {
   };
 
   const empruntActif = myEmprunts.find(
-    (e) => e.statut === "EN_COURS" || e.statut === "EN_RETARD"
+    (e) => e.statut === "EN_COURS" || e.statut === "EN_RETARD",
   );
 
   if (loading) return <div className="loading">Chargement...</div>;
@@ -299,7 +304,8 @@ const Dashboard: React.FC = () => {
             <i className="fas fa-book-reader"></i> Emprunt en cours
           </h3>
           <p>
-            <strong>{empruntActif.livre.titre}</strong> par {empruntActif.livre.auteur}
+            <strong>{empruntActif.livre.titre}</strong> par{" "}
+            {empruntActif.livre.auteur}
           </p>
           <p>
             Retour prévu le{" "}
@@ -464,7 +470,10 @@ const Dashboard: React.FC = () => {
                     <textarea
                       value={bookForm.description}
                       onChange={(e) =>
-                        setBookForm({ ...bookForm, description: e.target.value })
+                        setBookForm({
+                          ...bookForm,
+                          description: e.target.value,
+                        })
                       }
                       rows={3}
                       placeholder="Description du livre (optionnelle)"
@@ -557,7 +566,9 @@ const Dashboard: React.FC = () => {
                       }
                     >
                       <option value={USER_ROLES.LECTEUR}>Lecteur</option>
-                      <option value={USER_ROLES.BIBLIOTHECAIRE}>Bibliothécaire</option>
+                      <option value={USER_ROLES.BIBLIOTHECAIRE}>
+                        Bibliothécaire
+                      </option>
                     </select>
                   </div>
                   <div className="form-actions">

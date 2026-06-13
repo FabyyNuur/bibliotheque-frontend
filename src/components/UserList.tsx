@@ -60,20 +60,20 @@ const UserList: React.FC = () => {
         user.prenom.toLowerCase().includes(query) ||
         user.email.toLowerCase().includes(query) ||
         getRoleLabel(user.role).toLowerCase().includes(query) ||
-        (user.actif ? "actif" : "inactif").includes(query)
+        (user.actif ? "actif" : "inactif").includes(query),
     );
   }, [users, searchQuery]);
 
   const deletableFilteredUsers = useMemo(
     () => filteredUsers.filter((user) => user.id !== currentUser?.id),
-    [filteredUsers, currentUser?.id]
+    [filteredUsers, currentUser?.id],
   );
 
   useEffect(() => {
     setSelectedUserIds((prev) =>
       prev.filter((id) =>
-        deletableFilteredUsers.some((user) => user.id === id)
-      )
+        deletableFilteredUsers.some((user) => user.id === id),
+      ),
     );
   }, [deletableFilteredUsers]);
 
@@ -113,7 +113,7 @@ const UserList: React.FC = () => {
 
   // Fonction spéciale pour les dates optionnelles (comme dateRetourReelle)
   const formatOptionalDate = (
-    dateString: string | Date | null | undefined
+    dateString: string | Date | null | undefined,
   ): string | null => {
     if (!dateString || dateString === null || dateString === undefined) {
       return null; // Retourner null pour les dates optionnelles non définies
@@ -121,7 +121,7 @@ const UserList: React.FC = () => {
     return formatDate(dateString);
   }; // Fonction pour déterminer le statut d'un emprunt
   const getEmpruntStatus = (
-    emprunt: any
+    emprunt: any,
   ): { status: string; className: string; icon: string } => {
     if (emprunt.dateRetourEffectif) {
       return {
@@ -202,7 +202,7 @@ const UserList: React.FC = () => {
         console.log(
           "Date d'inscription:",
           data[0].dateInscription,
-          typeof data[0].dateInscription
+          typeof data[0].dateInscription,
         );
       }
       setUsers(data);
@@ -226,17 +226,17 @@ const UserList: React.FC = () => {
         console.log(
           "dateEmprunt:",
           emprunts[0].dateEmprunt,
-          typeof emprunts[0].dateEmprunt
+          typeof emprunts[0].dateEmprunt,
         );
         console.log(
           "dateRetourPrevu:",
           emprunts[0].dateRetourPrevu,
-          typeof emprunts[0].dateRetourPrevu
+          typeof emprunts[0].dateRetourPrevu,
         );
         console.log(
           "dateRetourEffectif:",
           emprunts[0].dateRetourEffectif,
-          typeof emprunts[0].dateRetourEffectif
+          typeof emprunts[0].dateRetourEffectif,
         );
       }
 
@@ -273,15 +273,15 @@ const UserList: React.FC = () => {
       loadUsers();
 
       if (created.emailSent === false) {
-        setError(
-          `Utilisateur créé, mais l'email n'a pas pu être envoyé à ${created.email}.`
+        setSuccess(
+          `Utilisateur créé. Email non envoyé à ${created.email} (adresse fictive ou SMTP indisponible).`,
         );
       } else if (created.emailSent) {
         setSuccess(
-          `Utilisateur créé. Un email avec les identifiants a été envoyé à ${created.email}.`
+          `Utilisateur créé. Un email avec les identifiants a été envoyé à ${created.email}.`,
         );
       } else {
-        setSuccess('Utilisateur créé avec succès.');
+        setSuccess("Utilisateur créé avec succès.");
       }
     } catch (err) {
       setError("Erreur lors de la création de l'utilisateur");
@@ -367,15 +367,15 @@ const UserList: React.FC = () => {
             .filter(isActiveEmprunt)
             .map((emprunt) => emprunt.id);
           return { userId: user.id, activeIds };
-        })
+        }),
       );
 
       const activeEmpruntsByUserId = Object.fromEntries(
-        empruntResults.map(({ userId, activeIds }) => [userId, activeIds])
+        empruntResults.map(({ userId, activeIds }) => [userId, activeIds]),
       );
       const totalActiveLoans = empruntResults.reduce(
         (sum, { activeIds }) => sum + activeIds.length,
-        0
+        0,
       );
 
       setDeleteModal({
@@ -409,7 +409,9 @@ const UserList: React.FC = () => {
     if (isCurrentUser(id)) return;
 
     setSelectedUserIds((prev) =>
-      prev.includes(id) ? prev.filter((userId) => userId !== id) : [...prev, id]
+      prev.includes(id)
+        ? prev.filter((userId) => userId !== id)
+        : [...prev, id],
     );
   };
 
@@ -422,7 +424,7 @@ const UserList: React.FC = () => {
     setSelectedUserIds((prev) =>
       allSelected
         ? prev.filter((id) => !visibleIds.includes(id))
-        : Array.from(new Set([...prev, ...visibleIds]))
+        : Array.from(new Set([...prev, ...visibleIds])),
     );
   };
 
@@ -457,16 +459,14 @@ const UserList: React.FC = () => {
     }
 
     closeDeleteModal();
-    setSelectedUserIds((prev) =>
-      prev.filter((id) => !userIds.includes(id))
-    );
+    setSelectedUserIds((prev) => prev.filter((id) => !userIds.includes(id)));
     loadUsers();
 
     if (failed > 0) {
       setError(
         succeeded === 0
           ? "Erreur lors de la suppression des utilisateurs sélectionnés."
-          : `${succeeded} utilisateur${succeeded > 1 ? "s" : ""} supprimé${succeeded > 1 ? "s" : ""}, ${failed} échec${failed > 1 ? "s" : ""}.`
+          : `${succeeded} utilisateur${succeeded > 1 ? "s" : ""} supprimé${succeeded > 1 ? "s" : ""}, ${failed} échec${failed > 1 ? "s" : ""}.`,
       );
     }
   };
@@ -506,7 +506,7 @@ const UserList: React.FC = () => {
     }
 
     const usersWithLoans = users.filter(
-      (user) => (pending.activeEmpruntsByUserId[user.id] ?? []).length > 0
+      (user) => (pending.activeEmpruntsByUserId[user.id] ?? []).length > 0,
     ).length;
 
     if (totalActiveLoans > 0) {
@@ -603,10 +603,7 @@ const UserList: React.FC = () => {
       </div>
 
       {showEditForm && (
-        <form
-          className="create-form"
-          onSubmit={handleUpdateUser}
-        >
+        <form className="create-form" onSubmit={handleUpdateUser}>
           <h3>Modifier l'utilisateur</h3>
           <div className="form-group">
             <input
@@ -675,7 +672,7 @@ const UserList: React.FC = () => {
                     checked={
                       deletableFilteredUsers.length > 0 &&
                       deletableFilteredUsers.every((user) =>
-                        selectedUserIds.includes(user.id)
+                        selectedUserIds.includes(user.id),
                       )
                     }
                     onChange={toggleSelectAllUsers}
@@ -714,9 +711,7 @@ const UserList: React.FC = () => {
                 <td>{user.email}</td>
                 <td>{formatDate(user.dateInscription)}</td>
                 <td>
-                  <span className="role-badge">
-                    {getRoleLabel(user.role)}
-                  </span>
+                  <span className="role-badge">{getRoleLabel(user.role)}</span>
                 </td>
                 <td>
                   <span
@@ -800,9 +795,7 @@ const UserList: React.FC = () => {
             : "Supprimer l'utilisateur"
         }
         message={
-          deleteModal.pending
-            ? buildDeleteMessage(deleteModal.pending)
-            : ""
+          deleteModal.pending ? buildDeleteMessage(deleteModal.pending) : ""
         }
         confirmLabel="Supprimer"
         onConfirm={confirmDeleteUsers}
@@ -863,9 +856,9 @@ const UserList: React.FC = () => {
                 />
               </div>
               <p className="form-hint">
-                Un email contenant les identifiants de connexion sera envoyé
-                à l'adresse indiquée. L'utilisateur devra changer son mot de
-                passe à la première connexion.
+                Un email contenant les identifiants de connexion sera envoyé à
+                l'adresse indiquée. L'utilisateur devra changer son mot de passe
+                à la première connexion.
               </p>
               <div className="form-group">
                 <label htmlFor="create-user-role">Rôle</label>
@@ -928,8 +921,7 @@ const UserList: React.FC = () => {
                   {formatDate(selectedUser.dateInscription)}
                 </p>
                 <p>
-                  <strong>Rôle:</strong>{" "}
-                  {getRoleLabel(selectedUser.role)}
+                  <strong>Rôle:</strong> {getRoleLabel(selectedUser.role)}
                 </p>
                 <p>
                   <strong>Statut:</strong>
@@ -976,7 +968,7 @@ const UserList: React.FC = () => {
                         </p>
                         {(() => {
                           const dateRetour = formatOptionalDate(
-                            emprunt.dateRetourEffectif
+                            emprunt.dateRetourEffectif,
                           );
                           return dateRetour ? (
                             <p>
