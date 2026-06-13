@@ -2,6 +2,7 @@ package com.biblio.selenium.pages;
 
 import com.biblio.selenium.utils.WaitUtils;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
@@ -36,6 +37,19 @@ public class ChangePasswordPage extends BasePage {
         fillPasswordForm(currentPassword, newPassword);
         click(SUBMIT_BUTTON);
         WaitUtils.waitForPageLoad(driver);
+    }
+
+    public void submitShortNewPassword(String currentPassword, String newPassword) {
+        fillPasswordForm(currentPassword, newPassword);
+        removeNativeLengthValidation();
+        click(SUBMIT_BUTTON);
+        WaitUtils.waitForPageLoad(driver);
+    }
+
+    private void removeNativeLengthValidation() {
+        ((JavascriptExecutor) driver).executeScript(
+                "document.querySelectorAll('#new-password, #confirm-password').forEach("
+                        + "el => el.removeAttribute('minlength'));");
     }
 
     public void waitUntilLeftPage() {

@@ -4,7 +4,6 @@ import com.biblio.selenium.config.TestConfig;
 import com.biblio.selenium.utils.WaitUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 
@@ -46,10 +45,16 @@ public abstract class BasePage {
         WaitUtils.waitForVisible(driver, locator);
         WebElement element = driver.findElement(locator);
         element.click();
-        element.sendKeys(Keys.chord(Keys.CONTROL, "a"), Keys.DELETE);
-        if (text != null && !text.isEmpty()) {
-            element.sendKeys(text);
-        }
+        String value = text == null ? "" : text;
+        ((JavascriptExecutor) driver).executeScript(
+                "const el = arguments[0];"
+                        + "const value = arguments[1];"
+                        + "const setter = Object.getOwnPropertyDescriptor("
+                        + "window.HTMLInputElement.prototype, 'value').set;"
+                        + "setter.call(el, value);"
+                        + "el.dispatchEvent(new Event('input', { bubbles: true }));"
+                        + "el.dispatchEvent(new Event('change', { bubbles: true }));",
+                element, value);
     }
 
     protected String getText(By locator) {

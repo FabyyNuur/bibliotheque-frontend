@@ -36,7 +36,7 @@ class ErrorHandlingTest extends BaseTest {
 
         ChangePasswordPage changePasswordPage = new ChangePasswordPage(driver);
         changePasswordPage.waitUntilDisplayed();
-        changePasswordPage.submitNewPassword(
+        changePasswordPage.submitShortNewPassword(
                 TestDataFactory.defaultTemporaryPassword(),
                 "abc"
         );
