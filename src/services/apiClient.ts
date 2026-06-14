@@ -35,6 +35,13 @@ apiClient.interceptors.response.use(
       setStoredToken(null);
       window.dispatchEvent(new Event('auth:logout'));
     }
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.mustChangePassword &&
+      !window.location.pathname.startsWith('/change-password')
+    ) {
+      window.location.assign('/change-password');
+    }
     console.error('Erreur API:', error.response?.data || error.message);
     return Promise.reject(error);
   }

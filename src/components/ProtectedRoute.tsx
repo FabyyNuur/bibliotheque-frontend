@@ -11,7 +11,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requireBibliothecaire = false,
 }) => {
-  const { isAuthenticated, isBibliothecaire, isLoading } = useAuth();
+  const { user, isAuthenticated, isBibliothecaire, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -20,6 +20,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (
+    user?.mustChangePassword &&
+    location.pathname !== '/change-password'
+  ) {
+    return <Navigate to="/change-password" replace />;
   }
 
   if (requireBibliothecaire && !isBibliothecaire) {

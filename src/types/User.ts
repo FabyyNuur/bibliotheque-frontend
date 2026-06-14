@@ -10,14 +10,19 @@ export interface User {
   dateInscription: string;
   actif: boolean;
   role: UserRole;
+  mustChangePassword?: boolean;
 }
 
 export interface CreateUserRequest {
   nom: string;
   prenom: string;
   email: string;
-  password: string;
+  password?: string;
   role?: UserRole;
+}
+
+export interface CreateUserResponse extends User {
+  emailSent?: boolean;
 }
 
 export interface UpdateUserRequest {
@@ -36,4 +41,9 @@ export interface LoginRequest {
 export interface LoginResponse {
   user: User;
   token: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }

@@ -69,11 +69,16 @@ cd bibliotheque-api-impl
 # Installer les dépendances
 npm install
 
-# Démarrer l'API backend
-npm start
+# (Optionnel) Peupler le catalogue avec ~100 livres de démonstration
+npm run seed:books
+
+# Démarrer l'API backend en mode développement
+npm run dev
 ```
 
 L'API sera accessible sur `http://localhost:3000/api`
+
+Au premier démarrage, un compte bibliothécaire est créé automatiquement (`admin@biblio.com` / `secret123`). Voir le README du backend pour les scripts `npm run seed` et `npm run seed:books`.
 
 #### 2. Installation du Frontend
 
@@ -99,6 +104,18 @@ L'application sera accessible sur [http://localhost:3001](http://localhost:3001)
 REACT_APP_API_URL=http://localhost:VOTRE_PORT/api
 ```
 
+### Démarrage rapide (développement local)
+
+```bash
+# Terminal 1 — API
+cd api-impl-biblio && npm install && npm run seed:books && npm run dev
+
+# Terminal 2 — Frontend
+cd bibliotheque-frontend && npm install && npm start
+```
+
+Connectez-vous avec le compte bibliothécaire par défaut (`admin@biblio.com` / `secret123`) pour accéder à toutes les fonctionnalités.
+
 ### Scripts Disponibles
 
 ```bash
@@ -107,6 +124,21 @@ npm run build    # Build de production
 npm test         # Exécution des tests
 npm run eject    # Éjection de Create React App (irréversible)
 ```
+
+### Tests Selenium (UI navigateur)
+
+Des tests E2E Selenium WebDriver sont disponibles dans `selenium-tests/`.
+
+**Prérequis :** Java 17+, Maven 3.8+, Google Chrome, API + frontend démarrés
+
+```bash
+# API sur :3000, frontend sur :3001
+./scripts/run-selenium.sh
+# ou
+cd selenium-tests && mvn test
+```
+
+Voir [selenium-tests/README.md](selenium-tests/README.md) pour plus de détails.
 
 ## Fonctionnalités Principales
 
@@ -129,6 +161,8 @@ npm run eject    # Éjection de Create React App (irréversible)
   - Date d'inscription
   - Statut (actif/inactif)
 - **Fonctionnalités avancées** :
+  - Création sans mot de passe : l'utilisateur reçoit un email avec ses identifiants
+  - Redirection automatique vers `/change-password` à la première connexion
   - Activation/désactivation des comptes
   - Visualisation détaillée avec historique des emprunts
   - Modal d'information avec données complètes
@@ -141,6 +175,7 @@ npm run eject    # Éjection de Create React App (irréversible)
   - Titre, auteur, ISBN
   - Genre, année de publication
   - Description optionnelle
+  - Nombre d'exemplaires
   - Statut de disponibilité
 - **Fonctionnalités** :
   - Recherche multi-critères (titre, auteur, genre)
@@ -293,7 +328,7 @@ src/
 ## Améliorations Futures
 
 - [X] **Backend API REST complet** - ✅ Implémenté dans [bibliotheque-api-impl](https://github.com/FabyyNuur/bibliotheque-api-impl)
-- [ ] Authentification et autorisation
+- [X] **Authentification et autorisation** - ✅ Connexion JWT avec rôles bibliothécaire / lecteur
 - [ ] Système de notifications en temps réel
 - [ ] Export de données (PDF, Excel)
 - [ ] Historique des actions utilisateur
@@ -324,6 +359,6 @@ Les contributions sont les bienvenues ! Pour contribuer :
 Ce projet est composé de deux repositories distincts :
 
 📋 **Frontend** : [bibliotheque-frontend](https://github.com/FabyyNuur/bibliotheque-frontend) - Interface utilisateur React/TypeScript
-🔧 **Backend API** : [bibliotheque-api-imp-bibliol](https://github.com/FabyyNuur/bibliotheque-api-impl-biblio) - API REST pour la gestion des données
+🔧 **Backend API** : [bibliotheque-api-impl](https://github.com/FabyyNuur/bibliotheque-api-impl) - API REST pour la gestion des données
 
 *Développé avec ❤️ pour moderniser la gestion des bibliothèques*

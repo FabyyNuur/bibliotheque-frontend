@@ -1,10 +1,10 @@
 import { apiClient } from './apiClient';
-import { User, CreateUserRequest, UpdateUserRequest } from '../types/User';
+import { User, CreateUserRequest, UpdateUserRequest, CreateUserResponse } from '../types/User';
 
 export const userService = {
 
-  async createUser(userData: CreateUserRequest): Promise<User> {
-    const response = await apiClient.post('/users', userData);
+  async createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
+    const response = await apiClient.post<CreateUserResponse>('/users', userData);
     return response.data;
   },
 

@@ -3,14 +3,26 @@ import { userService } from "../services/userService";
 import { empruntService } from "../services/empruntService";
 import { User, CreateUserRequest, UserRole } from "../types/User";
 import { getRoleLabel, USER_ROLES } from "../constants/roles";
-import PasswordInput from "./PasswordInput";
+import ConfirmModal from "./ConfirmModal";
 import { useAuth } from "../context/AuthContext";
+import { EmpruntAvecDetails } from "../types/Emprunt";
+
+interface PendingDelete {
+  userIds: string[];
+  users: { id: string; nom: string; prenom: string }[];
+  activeEmpruntsByUserId: Record<string, string[]>;
+  totalActiveLoans: number;
+}
+
+const isActiveEmprunt = (emprunt: EmpruntAvecDetails) =>
+  emprunt.statut !== "RETOURNE";
 
 const UserList: React.FC = () => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [showUserDetails, setShowUserDetails] = useState(false);
@@ -18,14 +30,25 @@ const UserList: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userEmprunts, setUserEmprunts] = useState<any[]>([]);
   const [loadingEmprunts, setLoadingEmprunts] = useState(false);
-  const [newUser, setNewUser] = useState<CreateUserRequest>({
+  const [newUser, setNewUser] = useState<Omit<CreateUserRequest, "password">>({
     nom: "",
     prenom: "",
     email: "",
-    password: "",
     role: USER_ROLES.LECTEUR,
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    preparing: boolean;
+    loading: boolean;
+    pending: PendingDelete | null;
+  }>({
+    isOpen: false,
+    preparing: false,
+    loading: false,
+    pending: null,
+  });
 
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return users;
@@ -37,9 +60,22 @@ const UserList: React.FC = () => {
         user.prenom.toLowerCase().includes(query) ||
         user.email.toLowerCase().includes(query) ||
         getRoleLabel(user.role).toLowerCase().includes(query) ||
-        (user.actif ? "actif" : "inactif").includes(query)
+        (user.actif ? "actif" : "inactif").includes(query),
     );
   }, [users, searchQuery]);
+
+  const deletableFilteredUsers = useMemo(
+    () => filteredUsers.filter((user) => user.id !== currentUser?.id),
+    [filteredUsers, currentUser?.id],
+  );
+
+  useEffect(() => {
+    setSelectedUserIds((prev) =>
+      prev.filter((id) =>
+        deletableFilteredUsers.some((user) => user.id === id),
+      ),
+    );
+  }, [deletableFilteredUsers]);
 
   // Fonction utilitaire pour formater les dates
   const formatDate = (dateString: string | Date | null | undefined): string => {
@@ -77,7 +113,7 @@ const UserList: React.FC = () => {
 
   // Fonction spéciale pour les dates optionnelles (comme dateRetourReelle)
   const formatOptionalDate = (
-    dateString: string | Date | null | undefined
+    dateString: string | Date | null | undefined,
   ): string | null => {
     if (!dateString || dateString === null || dateString === undefined) {
       return null; // Retourner null pour les dates optionnelles non définies
@@ -85,7 +121,7 @@ const UserList: React.FC = () => {
     return formatDate(dateString);
   }; // Fonction pour déterminer le statut d'un emprunt
   const getEmpruntStatus = (
-    emprunt: any
+    emprunt: any,
   ): { status: string; className: string; icon: string } => {
     if (emprunt.dateRetourEffectif) {
       return {
@@ -166,7 +202,7 @@ const UserList: React.FC = () => {
         console.log(
           "Date d'inscription:",
           data[0].dateInscription,
-          typeof data[0].dateInscription
+          typeof data[0].dateInscription,
         );
       }
       setUsers(data);
@@ -190,17 +226,17 @@ const UserList: React.FC = () => {
         console.log(
           "dateEmprunt:",
           emprunts[0].dateEmprunt,
-          typeof emprunts[0].dateEmprunt
+          typeof emprunts[0].dateEmprunt,
         );
         console.log(
           "dateRetourPrevu:",
           emprunts[0].dateRetourPrevu,
-          typeof emprunts[0].dateRetourPrevu
+          typeof emprunts[0].dateRetourPrevu,
         );
         console.log(
           "dateRetourEffectif:",
           emprunts[0].dateRetourEffectif,
-          typeof emprunts[0].dateRetourEffectif
+          typeof emprunts[0].dateRetourEffectif,
         );
       }
 
@@ -230,13 +266,37 @@ const UserList: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await userService.createUser(newUser);
-      setNewUser({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
-      setShowCreateForm(false);
+      setError(null);
+      setSuccess(null);
+      const created = await userService.createUser(newUser);
+      closeCreateModal();
       loadUsers();
+
+      if (created.emailSent === false) {
+        setSuccess(
+          `Utilisateur créé. Email non envoyé à ${created.email} (adresse fictive ou SMTP indisponible).`,
+        );
+      } else if (created.emailSent) {
+        setSuccess(
+          `Utilisateur créé. Un email avec les identifiants a été envoyé à ${created.email}.`,
+        );
+      } else {
+        setSuccess("Utilisateur créé avec succès.");
+      }
     } catch (err) {
       setError("Erreur lors de la création de l'utilisateur");
     }
+  };
+
+  const openCreateModal = () => {
+    cancelEdit();
+    setNewUser({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
+    setShowCreateForm(true);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateForm(false);
+    setNewUser({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
   };
 
   const handleEditUser = (user: User) => {
@@ -245,7 +305,6 @@ const UserList: React.FC = () => {
       nom: user.nom,
       prenom: user.prenom,
       email: user.email,
-      password: "",
       role: user.role,
     });
     setShowEditForm(true);
@@ -263,7 +322,7 @@ const UserList: React.FC = () => {
         email: newUser.email,
         role: newUser.role,
       });
-      setNewUser({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
+      setNewUser({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
       setShowEditForm(false);
       setEditingUser(null);
       loadUsers();
@@ -275,30 +334,208 @@ const UserList: React.FC = () => {
   const cancelEdit = () => {
     setShowEditForm(false);
     setEditingUser(null);
-    setNewUser({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
+    setNewUser({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
   };
 
   const isCurrentUser = (userId: string) => currentUser?.id === userId;
 
-  const handleDeleteUser = async (id: string) => {
+  const closeDeleteModal = () => {
+    setDeleteModal({
+      isOpen: false,
+      preparing: false,
+      loading: false,
+      pending: null,
+    });
+  };
+
+  const prepareDeleteModal = async (userIds: string[]) => {
+    const targets = users.filter((user) => userIds.includes(user.id));
+    if (targets.length === 0) return;
+
+    setDeleteModal({
+      isOpen: true,
+      preparing: true,
+      loading: false,
+      pending: null,
+    });
+
+    try {
+      const empruntResults = await Promise.all(
+        targets.map(async (user) => {
+          const emprunts = await empruntService.getEmpruntsByUserId(user.id);
+          const activeIds = emprunts
+            .filter(isActiveEmprunt)
+            .map((emprunt) => emprunt.id);
+          return { userId: user.id, activeIds };
+        }),
+      );
+
+      const activeEmpruntsByUserId = Object.fromEntries(
+        empruntResults.map(({ userId, activeIds }) => [userId, activeIds]),
+      );
+      const totalActiveLoans = empruntResults.reduce(
+        (sum, { activeIds }) => sum + activeIds.length,
+        0,
+      );
+
+      setDeleteModal({
+        isOpen: true,
+        preparing: false,
+        loading: false,
+        pending: {
+          userIds: targets.map((user) => user.id),
+          users: targets.map(({ id, nom, prenom }) => ({ id, nom, prenom })),
+          activeEmpruntsByUserId,
+          totalActiveLoans,
+        },
+      });
+    } catch {
+      closeDeleteModal();
+      setError("Erreur lors de la préparation de la suppression");
+    }
+  };
+
+  const handleDeleteUser = (id: string) => {
     if (isCurrentUser(id)) {
       setError("Vous ne pouvez pas supprimer votre propre compte");
       return;
     }
 
-    if (
-      window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")
-    ) {
+    setError(null);
+    prepareDeleteModal([id]);
+  };
+
+  const toggleUserSelection = (id: string) => {
+    if (isCurrentUser(id)) return;
+
+    setSelectedUserIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((userId) => userId !== id)
+        : [...prev, id],
+    );
+  };
+
+  const toggleSelectAllUsers = () => {
+    const visibleIds = deletableFilteredUsers.map((user) => user.id);
+    const allSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedUserIds.includes(id));
+
+    setSelectedUserIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !visibleIds.includes(id))
+        : Array.from(new Set([...prev, ...visibleIds])),
+    );
+  };
+
+  const handleBulkDeleteUsers = () => {
+    const idsToDelete = selectedUserIds.filter((id) => !isCurrentUser(id));
+    if (idsToDelete.length === 0) return;
+
+    setError(null);
+    prepareDeleteModal(idsToDelete);
+  };
+
+  const confirmDeleteUsers = async () => {
+    const { pending } = deleteModal;
+    if (!pending) return;
+
+    setDeleteModal((prev) => ({ ...prev, loading: true }));
+
+    const { userIds, activeEmpruntsByUserId } = pending;
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const userId of userIds) {
       try {
-        await userService.deleteUser(id);
-        loadUsers();
-      } catch (err: unknown) {
-        const message =
-          (err as { response?: { data?: { error?: string } } })?.response?.data
-            ?.error || "Erreur lors de la suppression de l'utilisateur";
-        setError(message);
+        for (const empruntId of activeEmpruntsByUserId[userId] ?? []) {
+          await empruntService.returnBook(empruntId);
+        }
+        await userService.deleteUser(userId);
+        succeeded++;
+      } catch {
+        failed++;
       }
     }
+
+    closeDeleteModal();
+    setSelectedUserIds((prev) => prev.filter((id) => !userIds.includes(id)));
+    loadUsers();
+
+    if (failed > 0) {
+      setError(
+        succeeded === 0
+          ? "Erreur lors de la suppression des utilisateurs sélectionnés."
+          : `${succeeded} utilisateur${succeeded > 1 ? "s" : ""} supprimé${succeeded > 1 ? "s" : ""}, ${failed} échec${failed > 1 ? "s" : ""}.`,
+      );
+    }
+  };
+
+  const buildDeleteMessage = (pending: PendingDelete) => {
+    const { users, userIds, totalActiveLoans } = pending;
+    const count = userIds.length;
+
+    if (count === 1) {
+      const user = users[0];
+      const name = `${user.prenom} ${user.nom}`;
+
+      if (totalActiveLoans > 0) {
+        return (
+          <>
+            <p>
+              <strong>{name}</strong> a {totalActiveLoans} emprunt
+              {totalActiveLoans > 1 ? "s" : ""} en cours.
+            </p>
+            <p>
+              Les livres seront automatiquement marqués comme retournés avant la
+              suppression de ce compte.
+            </p>
+            <p>Cette action est irréversible.</p>
+          </>
+        );
+      }
+
+      return (
+        <>
+          <p>
+            Êtes-vous sûr de vouloir supprimer <strong>{name}</strong> ?
+          </p>
+          <p>Cette action est irréversible.</p>
+        </>
+      );
+    }
+
+    const usersWithLoans = users.filter(
+      (user) => (pending.activeEmpruntsByUserId[user.id] ?? []).length > 0,
+    ).length;
+
+    if (totalActiveLoans > 0) {
+      return (
+        <>
+          <p>
+            Vous allez supprimer <strong>{count} utilisateurs</strong>.
+          </p>
+          <p>
+            {usersWithLoans} d'entre eux ont des emprunts en cours — les livres
+            seront automatiquement marqués comme retournés.
+          </p>
+          <p>Cette action est irréversible.</p>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <p>
+          Êtes-vous sûr de vouloir supprimer{" "}
+          <strong>
+            {count} utilisateur{count > 1 ? "s" : ""}
+          </strong>{" "}
+          ?
+        </p>
+        <p>Cette action est irréversible.</p>
+      </>
+    );
   };
 
   const toggleUserStatus = async (user: User) => {
@@ -325,6 +562,16 @@ const UserList: React.FC = () => {
       <div className="header">
         <h2>Gestion des Utilisateurs</h2>
         <div className="header-buttons">
+          {selectedUserIds.length > 0 && (
+            <button
+              className="btn danger btn-icon"
+              onClick={handleBulkDeleteUsers}
+              data-testid="user-bulk-delete"
+            >
+              <i className="fas fa-trash"></i>
+              Supprimer ({selectedUserIds.length})
+            </button>
+          )}
           {showEditForm && (
             <button className="btn secondary btn-icon" onClick={cancelEdit}>
               <i className="fas fa-times"></i>
@@ -333,25 +580,17 @@ const UserList: React.FC = () => {
           )}
           <button
             className="btn primary btn-icon"
-            onClick={() => {
-              if (showEditForm) {
-                cancelEdit();
-              } else {
-                setShowCreateForm(!showCreateForm);
-              }
-            }}
+            onClick={openCreateModal}
+            data-testid="user-create-open"
           >
             <i className="fas fa-user-plus"></i>
-            {showCreateForm
-              ? "Annuler"
-              : showEditForm
-              ? "Nouvel utilisateur"
-              : "Nouvel utilisateur"}
+            Nouvel utilisateur
           </button>
         </div>
       </div>
 
       {error && <div className="error">{error}</div>}
+      {success && <div className="success">{success}</div>}
 
       <div className="filters">
         <input
@@ -363,16 +602,9 @@ const UserList: React.FC = () => {
         />
       </div>
 
-      {(showCreateForm || showEditForm) && (
-        <form
-          className="create-form"
-          onSubmit={showEditForm ? handleUpdateUser : handleCreateUser}
-        >
-          <h3>
-            {showEditForm
-              ? "Modifier l'utilisateur"
-              : "Créer un nouvel utilisateur"}
-          </h3>
+      {showEditForm && (
+        <form className="create-form" onSubmit={handleUpdateUser}>
+          <h3>Modifier l'utilisateur</h3>
           <div className="form-group">
             <input
               type="text"
@@ -399,18 +631,6 @@ const UserList: React.FC = () => {
               }
               required
             />
-            {!showEditForm && (
-              <PasswordInput
-                placeholder="Mot de passe (min. 6 caractères)"
-                value={newUser.password}
-                onChange={(e) =>
-                  setNewUser({ ...newUser, password: e.target.value })
-                }
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
-            )}
             <select
               value={newUser.role || USER_ROLES.LECTEUR}
               onChange={(e) =>
@@ -427,18 +647,16 @@ const UserList: React.FC = () => {
           <div className="form-actions">
             <button type="submit" className="btn primary btn-icon">
               <i className="fas fa-save"></i>
-              {showEditForm ? "Modifier" : "Créer"}
+              Modifier
             </button>
-            {showEditForm && (
-              <button
-                type="button"
-                className="btn secondary btn-icon"
-                onClick={cancelEdit}
-              >
-                <i className="fas fa-times"></i>
-                Annuler
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn secondary btn-icon"
+              onClick={cancelEdit}
+            >
+              <i className="fas fa-times"></i>
+              Annuler
+            </button>
           </div>
         </form>
       )}
@@ -447,6 +665,22 @@ const UserList: React.FC = () => {
         <table className="users-table">
           <thead className="table-header-white">
             <tr>
+              <th className="select-column">
+                {deletableFilteredUsers.length > 0 && (
+                  <input
+                    type="checkbox"
+                    checked={
+                      deletableFilteredUsers.length > 0 &&
+                      deletableFilteredUsers.every((user) =>
+                        selectedUserIds.includes(user.id),
+                      )
+                    }
+                    onChange={toggleSelectAllUsers}
+                    title="Tout sélectionner"
+                    data-testid="user-select-all"
+                  />
+                )}
+              </th>
               <th>Nom</th>
               <th>Prénom</th>
               <th>Email</th>
@@ -458,15 +692,26 @@ const UserList: React.FC = () => {
           </thead>
           <tbody>
             {filteredUsers.map((user) => (
-              <tr key={user.id}>
+              <tr
+                key={user.id}
+                className={selectedUserIds.includes(user.id) ? "selected" : ""}
+              >
+                <td className="select-column">
+                  {!isCurrentUser(user.id) ? (
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIds.includes(user.id)}
+                      onChange={() => toggleUserSelection(user.id)}
+                      data-testid="user-select"
+                    />
+                  ) : null}
+                </td>
                 <td>{user.nom}</td>
                 <td>{user.prenom}</td>
                 <td>{user.email}</td>
                 <td>{formatDate(user.dateInscription)}</td>
                 <td>
-                  <span className="role-badge">
-                    {getRoleLabel(user.role)}
-                  </span>
+                  <span className="role-badge">{getRoleLabel(user.role)}</span>
                 </td>
                 <td>
                   <span
@@ -519,6 +764,8 @@ const UserList: React.FC = () => {
                       className="btn small danger btn-icon-only"
                       onClick={() => handleDeleteUser(user.id)}
                       title="Supprimer"
+                      data-testid="user-delete"
+                      data-email={user.email}
                     >
                       <i className="fas fa-trash"></i>
                     </button>
@@ -537,6 +784,121 @@ const UserList: React.FC = () => {
               ? "Aucun utilisateur ne correspond à votre recherche"
               : "Aucun utilisateur trouvé"}
           </p>
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title={
+          deleteModal.pending && deleteModal.pending.userIds.length > 1
+            ? "Supprimer les utilisateurs"
+            : "Supprimer l'utilisateur"
+        }
+        message={
+          deleteModal.pending ? buildDeleteMessage(deleteModal.pending) : ""
+        }
+        confirmLabel="Supprimer"
+        onConfirm={confirmDeleteUsers}
+        onCancel={closeDeleteModal}
+        loading={deleteModal.loading}
+        preparing={deleteModal.preparing}
+        testId="user-delete-modal"
+      />
+
+      {showCreateForm && (
+        <div
+          className="modal-overlay"
+          onClick={closeCreateModal}
+          data-testid="user-create-modal"
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>
+              <i className="fas fa-user-plus"></i> Créer un nouvel utilisateur
+            </h3>
+            <form onSubmit={handleCreateUser}>
+              <div className="form-group">
+                <label htmlFor="create-user-nom">Nom</label>
+                <input
+                  id="create-user-nom"
+                  type="text"
+                  placeholder="Nom"
+                  value={newUser.nom}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, nom: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="create-user-prenom">Prénom</label>
+                <input
+                  id="create-user-prenom"
+                  type="text"
+                  placeholder="Prénom"
+                  value={newUser.prenom}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, prenom: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="create-user-email">Email</label>
+                <input
+                  id="create-user-email"
+                  type="email"
+                  placeholder="Email"
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, email: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <p className="form-hint">
+                Un email contenant les identifiants de connexion sera envoyé à
+                l'adresse indiquée. L'utilisateur devra changer son mot de passe
+                à la première connexion.
+              </p>
+              <div className="form-group">
+                <label htmlFor="create-user-role">Rôle</label>
+                <select
+                  id="create-user-role"
+                  value={newUser.role || USER_ROLES.LECTEUR}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      role: e.target.value as UserRole,
+                    })
+                  }
+                >
+                  <option value={USER_ROLES.LECTEUR}>Lecteur</option>
+                  <option value={USER_ROLES.BIBLIOTHECAIRE}>
+                    Bibliothécaire
+                  </option>
+                </select>
+              </div>
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="btn primary btn-icon"
+                  data-testid="user-create-submit"
+                >
+                  <i className="fas fa-save"></i>
+                  Créer
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary btn-icon"
+                  onClick={closeCreateModal}
+                  data-testid="user-create-cancel"
+                >
+                  <i className="fas fa-times"></i>
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -559,8 +921,7 @@ const UserList: React.FC = () => {
                   {formatDate(selectedUser.dateInscription)}
                 </p>
                 <p>
-                  <strong>Rôle:</strong>{" "}
-                  {getRoleLabel(selectedUser.role)}
+                  <strong>Rôle:</strong> {getRoleLabel(selectedUser.role)}
                 </p>
                 <p>
                   <strong>Statut:</strong>
@@ -607,7 +968,7 @@ const UserList: React.FC = () => {
                         </p>
                         {(() => {
                           const dateRetour = formatOptionalDate(
-                            emprunt.dateRetourEffectif
+                            emprunt.dateRetourEffectif,
                           );
                           return dateRetour ? (
                             <p>

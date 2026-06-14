@@ -5,10 +5,10 @@ import { bookService } from "../services/bookService";
 import { empruntService } from "../services/empruntService";
 import { useAuth } from "../context/AuthContext";
 import { UserRole } from "../types/User";
-import { isLecteur, USER_ROLES } from "../constants/roles";
+import { USER_ROLES } from "../constants/roles";
 import { EmpruntAvecDetails } from "../types/Emprunt";
 import { Book } from "../types/Book";
-import PasswordInput from "./PasswordInput";
+import EmpruntCreateForm, { EmpruntFormState } from "./EmpruntCreateForm";
 
 interface DashboardStats {
   totalUsers: number;
@@ -50,18 +50,17 @@ const Dashboard: React.FC = () => {
     nom: string;
     prenom: string;
     email: string;
-    password: string;
     role: UserRole;
   }>({
     nom: "",
     prenom: "",
     email: "",
-    password: "",
     role: USER_ROLES.LECTEUR,
   });
-  const [empruntForm, setEmpruntForm] = useState({
+  const [empruntForm, setEmpruntForm] = useState<EmpruntFormState>({
     utilisateurId: "",
     livreId: "",
+    dureeEmprunt: 14,
   });
   const [users, setUsers] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
@@ -79,7 +78,7 @@ const Dashboard: React.FC = () => {
       const sortedBooks = allBooksData
         .sort(
           (a, b) =>
-            new Date(b.dateAjout).getTime() - new Date(a.dateAjout).getTime()
+            new Date(b.dateAjout).getTime() - new Date(a.dateAjout).getTime(),
         )
         .slice(0, 5);
       setRecentBooks(sortedBooks);
@@ -93,14 +92,19 @@ const Dashboard: React.FC = () => {
       setLoading(true);
 
       if (isBibliothecaire) {
-        const [usersData, allBooks, availableBooks, currentLoans, overdueLoans] =
-          await Promise.all([
-            userService.getAllUsers(),
-            bookService.getAllBooks(),
-            bookService.getAvailableBooks(),
-            empruntService.getAllEmpruntsEnCours(),
-            empruntService.getEmpruntsEnRetard(),
-          ]);
+        const [
+          usersData,
+          allBooks,
+          availableBooks,
+          currentLoans,
+          overdueLoans,
+        ] = await Promise.all([
+          userService.getAllUsers(),
+          bookService.getAllBooks(),
+          bookService.getAvailableBooks(),
+          empruntService.getAllEmpruntsEnCours(),
+          empruntService.getEmpruntsEnRetard(),
+        ]);
 
         setStats({
           totalUsers: usersData.length,
@@ -118,7 +122,7 @@ const Dashboard: React.FC = () => {
 
         setMyEmprunts(emprunts);
         const enCours = emprunts.filter(
-          (e) => e.statut === "EN_COURS" || e.statut === "EN_RETARD"
+          (e) => e.statut === "EN_COURS" || e.statut === "EN_RETARD",
         );
 
         setStats({
@@ -132,7 +136,7 @@ const Dashboard: React.FC = () => {
         const sortedBooks = allBooks
           .sort(
             (a, b) =>
-              new Date(b.dateAjout).getTime() - new Date(a.dateAjout).getTime()
+              new Date(b.dateAjout).getTime() - new Date(a.dateAjout).getTime(),
           )
           .slice(0, 5);
         setRecentBooks(sortedBooks);
@@ -166,8 +170,8 @@ const Dashboard: React.FC = () => {
       description: "",
       nombreExemplaires: 1,
     });
-    setUserForm({ nom: "", prenom: "", email: "", password: "", role: USER_ROLES.LECTEUR });
-    setEmpruntForm({ utilisateurId: "", livreId: "" });
+    setUserForm({ nom: "", prenom: "", email: "", role: USER_ROLES.LECTEUR });
+    setEmpruntForm({ utilisateurId: "", livreId: "", dureeEmprunt: 14 });
   };
 
   const handleCreateBook = async (e: React.FormEvent) => {
@@ -188,10 +192,20 @@ const Dashboard: React.FC = () => {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await userService.createUser(userForm);
+      const created = await userService.createUser(userForm);
       closeModal();
       loadDashboardData();
       loadUsersAndBooks();
+
+      if (created.emailSent === false) {
+        alert(
+          `Utilisateur créé. Email non envoyé à ${created.email} (adresse fictive ou SMTP indisponible).`,
+        );
+      } else if (created.emailSent) {
+        alert(
+          `Utilisateur créé. Un email avec les identifiants a été envoyé à ${created.email}.`,
+        );
+      }
     } catch {
       alert("Erreur lors de la création de l'utilisateur");
     }
@@ -203,6 +217,7 @@ const Dashboard: React.FC = () => {
       await empruntService.createEmprunt({
         utilisateurId: empruntForm.utilisateurId,
         livreId: empruntForm.livreId,
+        dureeEmprunt: empruntForm.dureeEmprunt,
       });
       closeModal();
       loadDashboardData();
@@ -213,7 +228,7 @@ const Dashboard: React.FC = () => {
   };
 
   const empruntActif = myEmprunts.find(
-    (e) => e.statut === "EN_COURS" || e.statut === "EN_RETARD"
+    (e) => e.statut === "EN_COURS" || e.statut === "EN_RETARD",
   );
 
   if (loading) return <div className="loading">Chargement...</div>;
@@ -289,7 +304,8 @@ const Dashboard: React.FC = () => {
             <i className="fas fa-book-reader"></i> Emprunt en cours
           </h3>
           <p>
-            <strong>{empruntActif.livre.titre}</strong> par {empruntActif.livre.auteur}
+            <strong>{empruntActif.livre.titre}</strong> par{" "}
+            {empruntActif.livre.auteur}
           </p>
           <p>
             Retour prévu le{" "}
@@ -454,7 +470,10 @@ const Dashboard: React.FC = () => {
                     <textarea
                       value={bookForm.description}
                       onChange={(e) =>
-                        setBookForm({ ...bookForm, description: e.target.value })
+                        setBookForm({
+                          ...bookForm,
+                          description: e.target.value,
+                        })
                       }
                       rows={3}
                       placeholder="Description du livre (optionnelle)"
@@ -530,17 +549,11 @@ const Dashboard: React.FC = () => {
                       required
                     />
                   </div>
-                  <PasswordInput
-                    id="dashboard-user-password"
-                    label="Mot de passe :"
-                    value={userForm.password}
-                    onChange={(e) =>
-                      setUserForm({ ...userForm, password: e.target.value })
-                    }
-                    required
-                    minLength={6}
-                    autoComplete="new-password"
-                  />
+                  <p className="form-hint">
+                    Un email contenant les identifiants de connexion sera envoyé
+                    à l'adresse indiquée. L'utilisateur devra changer son mot de
+                    passe à la première connexion.
+                  </p>
                   <div className="form-group">
                     <label>Rôle:</label>
                     <select
@@ -553,7 +566,9 @@ const Dashboard: React.FC = () => {
                       }
                     >
                       <option value={USER_ROLES.LECTEUR}>Lecteur</option>
-                      <option value={USER_ROLES.BIBLIOTHECAIRE}>Bibliothécaire</option>
+                      <option value={USER_ROLES.BIBLIOTHECAIRE}>
+                        Bibliothécaire
+                      </option>
                     </select>
                   </div>
                   <div className="form-actions">
@@ -577,62 +592,16 @@ const Dashboard: React.FC = () => {
                 <h3>
                   <i className="fas fa-clipboard-list"></i> Créer un emprunt
                 </h3>
-                <form onSubmit={handleCreateEmprunt}>
-                  <div className="form-group">
-                    <label>Utilisateur:</label>
-                    <select
-                      value={empruntForm.utilisateurId}
-                      onChange={(e) =>
-                        setEmpruntForm({
-                          ...empruntForm,
-                          utilisateurId: e.target.value,
-                        })
-                      }
-                      required
-                    >
-                      <option value="">Sélectionner un lecteur</option>
-                      {users
-                        .filter((u) => u.actif && isLecteur(u.role))
-                        .map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.nom} {u.prenom} ({u.email})
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label>Livre:</label>
-                    <select
-                      value={empruntForm.livreId}
-                      onChange={(e) =>
-                        setEmpruntForm({
-                          ...empruntForm,
-                          livreId: e.target.value,
-                        })
-                      }
-                      required
-                    >
-                      <option value="">Sélectionner un livre</option>
-                      {books.map((book) => (
-                        <option key={book.id} value={book.id}>
-                          {book.titre} - {book.auteur}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-actions">
-                    <button type="submit" className="btn-primary btn-icon">
-                      <i className="fas fa-save"></i> Créer
-                    </button>
-                    <button
-                      type="button"
-                      onClick={closeModal}
-                      className="btn-secondary btn-icon"
-                    >
-                      <i className="fas fa-times"></i> Annuler
-                    </button>
-                  </div>
-                </form>
+                <EmpruntCreateForm
+                  form={empruntForm}
+                  users={users}
+                  books={books}
+                  onChange={(update) =>
+                    setEmpruntForm((prev) => ({ ...prev, ...update }))
+                  }
+                  onSubmit={handleCreateEmprunt}
+                  onCancel={closeModal}
+                />
               </div>
             )}
           </div>

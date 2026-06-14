@@ -3,6 +3,7 @@ import { bookService } from "../services/bookService";
 import { Book, CreateBookRequest } from "../types/Book";
 import { empruntService } from "../services/empruntService";
 import { useAuth } from "../context/AuthContext";
+import BookDetailModal from "./BookDetailModal";
 
 const BookList: React.FC = () => {
   const { isAuthenticated, isBibliothecaire } = useAuth();
@@ -26,10 +27,21 @@ const BookList: React.FC = () => {
     nombreExemplaires: 1,
   });
   const [borrowingId, setBorrowingId] = useState<string | null>(null);
+  const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
+  const [detailBook, setDetailBook] = useState<Book | null>(null);
+
+  const openBookDetail = (book: Book) => setDetailBook(book);
+  const closeBookDetail = () => setDetailBook(null);
 
   useEffect(() => {
     loadBooks();
   }, []);
+
+  useEffect(() => {
+    setSelectedBookIds((prev) =>
+      prev.filter((id) => books.some((book) => book.id === id))
+    );
+  }, [books]);
 
   useEffect(() => {
     let filtered = books;
@@ -49,6 +61,9 @@ const BookList: React.FC = () => {
     }
 
     setFilteredBooks(filtered);
+    setSelectedBookIds((prev) =>
+      prev.filter((id) => filtered.some((book) => book.id === id))
+    );
   }, [books, searchQuery, filterAvailable]);
 
   const loadBooks = async () => {
@@ -147,10 +162,67 @@ const BookList: React.FC = () => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce livre ?")) {
       try {
         await bookService.deleteBook(id);
+        setSelectedBookIds((prev) => prev.filter((bookId) => bookId !== id));
+        if (detailBook?.id === id) setDetailBook(null);
         loadBooks();
       } catch {
         setError("Erreur lors de la suppression du livre");
       }
+    }
+  };
+
+  const toggleBookSelection = (id: string) => {
+    setSelectedBookIds((prev) =>
+      prev.includes(id) ? prev.filter((bookId) => bookId !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllBooks = () => {
+    const visibleIds = filteredBooks.map((book) => book.id);
+    const allSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedBookIds.includes(id));
+
+    setSelectedBookIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !visibleIds.includes(id))
+        : Array.from(new Set([...prev, ...visibleIds]))
+    );
+  };
+
+  const handleBulkDeleteBooks = async () => {
+    if (selectedBookIds.length === 0) return;
+
+    const count = selectedBookIds.length;
+    if (
+      !window.confirm(
+        `Êtes-vous sûr de vouloir supprimer ${count} livre${count > 1 ? "s" : ""} ?`
+      )
+    ) {
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+
+    const results = await Promise.allSettled(
+      selectedBookIds.map((id) => bookService.deleteBook(id))
+    );
+
+    const failed = results.filter((result) => result.status === "rejected").length;
+    const succeeded = count - failed;
+
+    setSelectedBookIds([]);
+    loadBooks();
+
+    if (failed === 0) {
+      setSuccess(`${succeeded} livre${succeeded > 1 ? "s" : ""} supprimé${succeeded > 1 ? "s" : ""}.`);
+    } else if (succeeded === 0) {
+      setError("Erreur lors de la suppression des livres sélectionnés.");
+    } else {
+      setError(
+        `${succeeded} livre${succeeded > 1 ? "s" : ""} supprimé${succeeded > 1 ? "s" : ""}, ${failed} échec${failed > 1 ? "s" : ""}.`
+      );
     }
   };
 
@@ -161,6 +233,7 @@ const BookList: React.FC = () => {
     try {
       await empruntService.createEmprunt({ livreId: bookId });
       setSuccess("Emprunt créé avec succès !");
+      setDetailBook(null);
       loadBooks();
     } catch (err: unknown) {
       const message =
@@ -181,6 +254,16 @@ const BookList: React.FC = () => {
         <h2>{isBibliothecaire ? "Gestion des Livres" : "Catalogue des Livres"}</h2>
         {isBibliothecaire && (
           <div className="header-buttons">
+            {selectedBookIds.length > 0 && (
+              <button
+                className="btn danger btn-icon"
+                onClick={handleBulkDeleteBooks}
+                data-testid="book-bulk-delete"
+              >
+                <i className="fas fa-trash"></i>
+                Supprimer ({selectedBookIds.length})
+              </button>
+            )}
             {showEditForm && (
               <button className="btn secondary btn-icon" onClick={cancelEdit}>
                 <i className="fas fa-times"></i>
@@ -223,6 +306,20 @@ const BookList: React.FC = () => {
           />
           Afficher uniquement les livres disponibles
         </label>
+        {isBibliothecaire && filteredBooks.length > 0 && (
+          <label className="filter-checkbox bulk-select-checkbox">
+            <input
+              type="checkbox"
+              checked={
+                filteredBooks.length > 0 &&
+                filteredBooks.every((book) => selectedBookIds.includes(book.id))
+              }
+              onChange={toggleSelectAllBooks}
+              data-testid="book-select-all"
+            />
+            Tout sélectionner ({filteredBooks.length})
+          </label>
+        )}
       </div>
 
       {isBibliothecaire && (showCreateForm || showEditForm) && (
@@ -328,81 +425,60 @@ const BookList: React.FC = () => {
           return (
             <div
               key={book.id}
-              className={`book-card ${!isAvailable ? "unavailable" : ""}`}
+              className={`book-card ${!isAvailable ? "unavailable" : ""} ${
+                selectedBookIds.includes(book.id) ? "selected" : ""
+              }`}
+              data-testid="book-card"
             >
-              <div className="book-header">
-                <h3>{book.titre}</h3>
-                <span className="status">
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      alignItems: "center",
-                    }}
-                  >
-                    <span
-                      className="badge"
-                      style={{
-                        background: isAvailable ? "#d4edda" : "#f8d7da",
-                        color: isAvailable ? "#155724" : "#721c24",
-                        borderRadius: "8px",
-                        padding: "2px 8px",
-                        fontWeight: 600,
-                        minWidth: "80px",
-                        display: "inline-block",
-                        textAlign: "center",
-                      }}
-                    >
-                      {isAvailable ? "Disponible" : "Indisponible"}
-                    </span>
-                    {isAvailable && (
-                      <span
-                        style={{
-                          background: "#f8f9fa",
-                          color: "#495057",
-                          borderRadius: "8px",
-                          padding: "2px 8px",
-                          fontWeight: 600,
-                          fontSize: "12px",
-                          minWidth: "40px",
-                          display: "inline-block",
-                          textAlign: "center",
-                          border: "1px solid #dee2e6",
-                        }}
-                      >
-                        {book.nombreExemplaires} ex.
-                      </span>
-                    )}
+              {isBibliothecaire && (
+                <div className="book-card-select">
+                  <label className="row-select-checkbox" title="Sélectionner">
+                    <input
+                      type="checkbox"
+                      checked={selectedBookIds.includes(book.id)}
+                      onChange={() => toggleBookSelection(book.id)}
+                      data-testid="book-select"
+                    />
+                  </label>
+                </div>
+              )}
+              <div className="book-card-body">
+                <div className="book-header">
+                  <div className="book-header-main">
+                    <h3>{book.titre}</h3>
+                    <p className="book-card-author">{book.auteur}</p>
                   </div>
-                </span>
-              </div>
-              <div className="book-details">
-                <p>
-                  <strong>Auteur:</strong>
-                  <span>{book.auteur}</span>
-                </p>
-                <p>
-                  <strong>Genre:</strong>
-                  <span>{book.genre}</span>
-                </p>
-                <p>
-                  <strong>ISBN:</strong>
-                  <span>{book.isbn}</span>
-                </p>
-                <p>
-                  <strong>Année:</strong>
-                  <span>{book.anneePublication}</span>
-                </p>
-                <p className="full-width">
-                  <strong>Ajouté le:</strong>
-                  <span>{new Date(book.dateAjout).toLocaleDateString("fr-FR")}</span>
-                </p>
-                {book.description && (
-                  <p className="full-width description">
-                    <strong>Description:</strong>
-                    <span>{book.description}</span>
-                  </p>
-                )}
+                  <div className="book-header-aside">
+                    <div className="book-card-badges">
+                      <span
+                        className={`book-badge ${
+                          isAvailable ? "book-badge-available" : "book-badge-unavailable"
+                        }`}
+                      >
+                        {isAvailable ? "Disponible" : "Indisponible"}
+                      </span>
+                      {isAvailable && (
+                        <span className="book-badge book-badge-stock">
+                          {book.nombreExemplaires} ex.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="book-details">
+                  <div className="book-meta-row">
+                    <span className="book-meta-item">{book.genre}</span>
+                    <span className="book-meta-sep">·</span>
+                    <span className="book-meta-item">{book.anneePublication}</span>
+                    <span className="book-meta-sep">·</span>
+                    <span className="book-meta-item book-meta-isbn">{book.isbn}</span>
+                  </div>
+                  {book.description && (
+                    <p className="book-card-desc" title={book.description}>
+                      {book.description}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="book-actions">
                 {isBibliothecaire && (
@@ -417,12 +493,23 @@ const BookList: React.FC = () => {
                     <button
                       className="btn small danger btn-icon"
                       onClick={() => handleDeleteBook(book.id)}
+                      data-testid="book-delete"
                     >
                       <i className="fas fa-trash"></i>
                       Supprimer
                     </button>
                   </>
                 )}
+                <button
+                  type="button"
+                  className="book-detail-eye-btn"
+                  onClick={() => openBookDetail(book)}
+                  title="Voir les détails"
+                  aria-label={`Voir les détails de ${book.titre}`}
+                  data-testid="book-detail-btn"
+                >
+                  <i className="fas fa-eye"></i>
+                </button>
                 {isAuthenticated && !isBibliothecaire && isAvailable && (
                   <button
                     className="btn small primary btn-icon"
@@ -444,6 +531,18 @@ const BookList: React.FC = () => {
           <p>Aucun livre trouvé</p>
         </div>
       )}
+
+      <BookDetailModal
+        book={detailBook}
+        isOpen={detailBook !== null}
+        onClose={closeBookDetail}
+        isBibliothecaire={isBibliothecaire}
+        isAuthenticated={isAuthenticated}
+        borrowingId={borrowingId}
+        onBorrow={handleBorrow}
+        onEdit={handleEditBook}
+        onDelete={handleDeleteBook}
+      />
     </div>
   );
 };

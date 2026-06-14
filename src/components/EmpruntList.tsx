@@ -4,8 +4,8 @@ import { userService } from "../services/userService";
 import { bookService } from "../services/bookService";
 import { EmpruntAvecDetails, CreateEmpruntRequest } from "../types/Emprunt";
 import { User } from "../types/User";
-import { isLecteur } from "../constants/roles";
 import { Book } from "../types/Book";
+import EmpruntCreateForm, { EmpruntFormState } from "./EmpruntCreateForm";
 
 const EmpruntList: React.FC = () => {
   const [emprunts, setEmprunts] = useState<EmpruntAvecDetails[]>([]);
@@ -18,15 +18,26 @@ const EmpruntList: React.FC = () => {
     "all" | "current" | "overdue" | "history"
   >("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [newEmprunt, setNewEmprunt] = useState<{
-    utilisateurId: string;
-    livreId: string;
-    dureeEmprunt: number;
-  }>({
+  const [newEmprunt, setNewEmprunt] = useState<EmpruntFormState>({
     utilisateurId: "",
     livreId: "",
     dureeEmprunt: 14,
   });
+
+  const resetEmpruntForm = () => {
+    setNewEmprunt({
+      utilisateurId: "",
+      livreId: "",
+      dureeEmprunt: 14,
+    });
+  };
+
+  const openCreateModal = () => setShowCreateForm(true);
+
+  const closeCreateModal = () => {
+    setShowCreateForm(false);
+    resetEmpruntForm();
+  };
 
   const loadEmpruntsByFilter = useCallback(async () => {
     switch (filter) {
@@ -74,12 +85,7 @@ const EmpruntList: React.FC = () => {
         payload.utilisateurId = newEmprunt.utilisateurId;
       }
       await empruntService.createEmprunt(payload);
-      setNewEmprunt({
-        utilisateurId: "",
-        livreId: "",
-        dureeEmprunt: 14,
-      });
-      setShowCreateForm(false);
+      closeCreateModal();
       loadData();
     } catch (err: any) {
       setError(
@@ -163,7 +169,7 @@ const EmpruntList: React.FC = () => {
     <div className="emprunt-list">
       <div className="header">
         <h2>Gestion des Emprunts</h2>
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div className="header-buttons">
           <button
             className={`btn ${filter === "history" ? "active" : "secondary"}`}
             onClick={() => setFilter("history")}
@@ -173,10 +179,11 @@ const EmpruntList: React.FC = () => {
           </button>
           <button
             className="btn primary btn-icon"
-            onClick={() => setShowCreateForm(!showCreateForm)}
+            onClick={openCreateModal}
+            data-testid="emprunt-create-open"
           >
             <i className="fas fa-plus"></i>
-            {showCreateForm ? "Annuler" : "Nouvel emprunt"}
+            Nouvel emprunt
           </button>
         </div>
       </div>
@@ -233,60 +240,27 @@ const EmpruntList: React.FC = () => {
       </div>
 
       {showCreateForm && (
-        <form className="create-form" onSubmit={handleCreateEmprunt}>
-          <h3>Créer un nouvel emprunt</h3>
-
-          <div className="form-group">
-            <select
-              value={newEmprunt.utilisateurId}
-              onChange={(e) =>
-                setNewEmprunt({ ...newEmprunt, utilisateurId: e.target.value })
+        <div
+          className="modal-overlay"
+          onClick={closeCreateModal}
+          data-testid="emprunt-create-modal"
+        >
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>
+              <i className="fas fa-clipboard-list"></i> Créer un nouvel emprunt
+            </h3>
+            <EmpruntCreateForm
+              form={newEmprunt}
+              users={users}
+              books={availableBooks}
+              onChange={(update) =>
+                setNewEmprunt((prev) => ({ ...prev, ...update }))
               }
-              required
-            >
-              <option value="">Sélectionner un lecteur</option>
-              {users
-                .filter((user) => user.actif && isLecteur(user.role))
-                .map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.nom} {user.prenom} ({user.email})
-                  </option>
-                ))}
-            </select>
-
-            <select
-              value={newEmprunt.livreId}
-              onChange={(e) =>
-                setNewEmprunt({ ...newEmprunt, livreId: e.target.value })
-              }
-              required
-            >
-              <option value="">Sélectionner un livre</option>
-              {availableBooks.map((book) => (
-                <option key={book.id} value={book.id}>
-                  {book.titre} - {book.auteur}
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="number"
-              placeholder="Durée d'emprunt (jours)"
-              value={newEmprunt.dureeEmprunt}
-              onChange={(e) =>
-                setNewEmprunt({
-                  ...newEmprunt,
-                  dureeEmprunt: parseInt(e.target.value),
-                })
-              }
-              min="1"
-              max="30"
+              onSubmit={handleCreateEmprunt}
+              onCancel={closeCreateModal}
             />
           </div>
-          <button type="submit" className="btn primary">
-            Créer l'emprunt
-          </button>
-        </form>
+        </div>
       )}
 
       <div className="table-container">
@@ -391,6 +365,7 @@ const EmpruntList: React.FC = () => {
                         <button
                           className="btn small primary"
                           onClick={() => handleReturnBook(emprunt.id)}
+                          data-testid="emprunt-return"
                         >
                           <i className="fas fa-check"></i> Retourner le livre
                         </button>
